@@ -602,28 +602,8 @@
 }
 </style>
 
-<!-- ══════════════ THANK YOU TOAST (khi đóng popup) ══════════════ -->
-<div id="thank-toast" style="display:none;position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:99999;
-  background:linear-gradient(135deg,#500a14,#7a0c1e);color:#fff;
-  border-radius:16px;padding:18px 28px;box-shadow:0 8px 32px rgba(0,0,0,0.3);
-  align-items:center;gap:14px;min-width:280px;max-width:90vw;
-  animation:toastIn 0.4s ease;font-family:'Be Vietnam Pro',sans-serif;">
-  <span style="font-size:36px">🙏</span>
-  <div>
-    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:#e8b84b;margin-bottom:3px">
-      Nam Mô A Di Đà Phật
-    </div>
-    <div style="font-size:13px;opacity:0.9;line-height:1.5">
-      Cảm ơn quý phật tử đã phát tâm công đức.<br>Nhà chùa xin ghi nhận tấm lòng thành kính.
-    </div>
-  </div>
-</div>
-<style>
-@keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(20px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
-</style>
-
 <!-- ══════════════ PAYMENT MODAL ══════════════ -->
-<div id="payment-modal" class="modal-overlay" style="display:none" onclick="handleOverlayClick(event)">
+<div id="payment-modal" class="modal-overlay" style="display:none">
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal()">✕</button>
 
@@ -884,16 +864,6 @@ function closeModal() {
   // Chỉ đóng im lặng — cảm ơn chỉ hiện khi xác nhận CK xong
 }
 
-function showThankYouToast() {
-  const toast = document.getElementById('thank-toast');
-  if (!toast) return;
-  toast.style.display = 'flex';
-  toast.classList.add('show');
-  setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => toast.style.display = 'none', 400);
-  }, 4000);
-}
 function handleOverlayClick(e) {
   // Không đóng khi click ra ngoài — phải nhấn nút ✕
 }
