@@ -803,6 +803,8 @@ async function submitOrder() {
 
     currentOrderCode = data.order_code;
     showQR(data.order_code, amount, customer_name, product_name, members);
+    btn.disabled = false;
+    btn.textContent = '🙏 Tiếp tục Công Đức →';
   } catch(e) {
     alert('Lỗi: ' + e.message + '\n\nServer có đang chạy không? Chạy: node server.js');
     btn.disabled = false;

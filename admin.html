@@ -205,7 +205,10 @@
 </header>
 
 <div class="tabs">
-  <div class="tab active" onclick="switchTab('products')" id="tab-products">
+  <div class="tab active" onclick="switchTab('dashboard')" id="tab-dashboard">
+    📊 Tổng quan
+  </div>
+  <div class="tab" onclick="switchTab('products')" id="tab-products">
     🙏 Nghi lễ <span id="cnt-products" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
   </div>
   <div class="tab" onclick="switchTab('customers')" id="tab-customers">
@@ -218,8 +221,22 @@
 
 <div class="content">
 
+  <!-- ── DASHBOARD ── -->
+  <div class="panel active" id="panel-dashboard">
+    <div class="stats" id="stats-dashboard" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))"></div>
+    <div style="margin-top:24px">
+      <h3 style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--crimson-dark);margin-bottom:16px">🧾 Đơn Công Đức gần nhất</h3>
+      <div class="table-wrap">
+        <table id="recent-orders-table">
+          <thead><tr><th>Mã đơn</th><th>Phật tử</th><th>Nghi lễ</th><th>Số tiền</th><th>Trạng thái</th><th>Thời gian</th></tr></thead>
+          <tbody id="recent-orders-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- ── PRODUCTS ── -->
-  <div class="panel active" id="panel-products">
+  <div class="panel" id="panel-products">
     <div class="stats" id="stats-products"></div>
     <div class="toolbar">
       <div class="toolbar-left">
@@ -268,12 +285,13 @@
           <option value="success">Đã Công Đức</option>
         </select>
       </div>
+      <button class="btn btn-ghost" onclick="exportCSV()" style="border:1px solid var(--border)">📥 Xuất Excel</button>
       <button class="btn btn-primary" onclick="openModal('order')">+ Thêm đơn hàng</button>
     </div>
     <div class="table-wrap">
       <table id="orders-table">
         <thead><tr>
-          <th>Mã đơn</th><th>Phật tử</th><th>SĐT</th><th>Nghi lễ</th><th>Công đức</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th>
+          <th>Mã đơn</th><th>Phật tử</th><th>Nghi lễ</th><th>Gia đình</th><th>Công đức</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th>
         </tr></thead>
         <tbody id="orders-body"></tbody>
       </table>
@@ -392,10 +410,11 @@ let ordersData = [];
 // ─── INIT ────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   loadAll();
-  setInterval(loadOrders, 8000); // auto-refresh orders every 8s
+  setInterval(() => { loadOrders(); loadDashboard(); }, 8000); // auto-refresh orders every 8s
 });
 
 function loadAll() {
+  loadDashboard();
   loadProducts();
   loadCustomers();
   loadOrders();
@@ -407,6 +426,7 @@ function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'dashboard') loadDashboard();
 }
 
 // ─── SEARCH FILTER ────────────────────────────────────────────
@@ -435,6 +455,62 @@ function statusBadge(s) {
   if (s === 'success') return '<span class="badge badge-success">✅ Đã Công Đức</span>';
   if (s === 'pending')  return '<span class="badge badge-pending">⏳ Chờ Công Đức</span>';
   return '<span class="badge badge-gray">' + s + '</span>';
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const stats = await fetch('/api/stats').then(r => r.json());
+    document.getElementById('stats-dashboard').innerHTML = `
+      <div class="stat-card" style="border-top:3px solid var(--crimson)">
+        <div class="label">💰 Tổng Công Đức</div>
+        <div class="value" style="color:var(--crimson);font-size:22px">${stats.totalRevenue.toLocaleString('vi-VN')}đ</div>
+      </div>
+      <div class="stat-card" style="border-top:3px solid #16a34a">
+        <div class="label">📅 Hôm nay</div>
+        <div class="value" style="color:#16a34a;font-size:22px">${stats.todayRevenue.toLocaleString('vi-VN')}đ</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">🧾 Tổng đơn</div>
+        <div class="value">${stats.totalOrders}</div>
+      </div>
+      <div class="stat-card" style="border-top:3px solid #16a34a">
+        <div class="label">✅ Đã Công Đức</div>
+        <div class="value" style="color:#16a34a">${stats.successOrders}</div>
+      </div>
+      <div class="stat-card" style="border-top:3px solid #d97706">
+        <div class="label">⏳ Chờ xác nhận</div>
+        <div class="value" style="color:#d97706">${stats.pendingOrders}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">👥 Phật tử</div>
+        <div class="value">${stats.totalCustomers}</div>
+      </div>
+    `;
+
+    // Recent orders
+    const orders = await fetch('/api/orders').then(r => r.json());
+    const recent = orders.slice(0, 10);
+    const tbody = document.getElementById('recent-orders-body');
+    if (!recent.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="icon">🧾</div>Chưa có đơn nào</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = recent.map(o => `
+      <tr>
+        <td><code style="font-size:13px;color:var(--crimson);font-weight:600">${o.order_code}</code></td>
+        <td><strong>${o.customer_name || '—'}</strong><br><span style="font-size:11px;color:#888">${o.customer_phone||''}</span></td>
+        <td style="font-size:13px">${o.product_name || '—'}</td>
+        <td style="font-weight:600;color:var(--crimson)">${(o.amount||0).toLocaleString('vi-VN')}đ</td>
+        <td>${statusBadge(o.status)}</td>
+        <td style="color:var(--gray);font-size:12px">${fmtDate(o.created_at)}</td>
+      </tr>
+    `).join('');
+  } catch(e) { console.warn('Dashboard error', e); }
+}
+
+function exportCSV() {
+  window.open('/api/orders/export', '_blank');
 }
 
 // ─── DỊCH VỤ ──────────────────────────────────────────────────
@@ -629,8 +705,8 @@ async function loadOrders() {
     <tr>
       <td><code style="font-size:13px;color:var(--crimson);font-weight:600">${o.order_code}</code></td>
       <td><strong>${o.customer_name || '—'}</strong></td>
-      <td>${o.customer_phone || '—'}</td>
       <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.product_name || '—'}</td>
+      <td style="max-width:180px;font-size:12px;color:#555">${(o.note||'').split(' | ').slice(0,2).join(', ') || '—'}</td>
       <td style="font-weight:600;color:var(--crimson)">${fmtAmt(o.amount)}</td>
       <td>${statusBadge(o.status)}</td>
       <td style="color:var(--gray);font-size:13px">${fmtDate(o.created_at)}</td>

@@ -164,6 +164,39 @@ app.get('/api/orders/code/:code', (req, res) => {
   res.json(order);
 });
 
+// ─── API: STATS ────────────────────────────────────────────────
+app.get('/api/stats', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const totalRevenue   = db.prepare("SELECT COALESCE(SUM(amount),0) as v FROM orders WHERE status='success'").get().v;
+  const todayRevenue   = db.prepare("SELECT COALESCE(SUM(amount),0) as v FROM orders WHERE status='success' AND DATE(created_at)=?").get(today).v;
+  const totalOrders    = db.prepare("SELECT COUNT(*) as v FROM orders").get().v;
+  const pendingOrders  = db.prepare("SELECT COUNT(*) as v FROM orders WHERE status='pending'").get().v;
+  const successOrders  = db.prepare("SELECT COUNT(*) as v FROM orders WHERE status='success'").get().v;
+  const totalCustomers = db.prepare("SELECT COUNT(*) as v FROM customers").get().v;
+  res.json({ totalRevenue, todayRevenue, totalOrders, pendingOrders, successOrders, totalCustomers });
+});
+
+// ─── API: EXPORT CSV ───────────────────────────────────────────
+app.get('/api/orders/export', (req, res) => {
+  const orders = db.prepare('SELECT * FROM orders ORDER BY id DESC').all();
+  const rows = [
+    ['Mã đơn','Phật tử','SĐT','Nghi lễ','Số tiền','Trạng thái','Ghi chú (Gia đình)','Ngày tạo','Ngày CĐ']
+  ];
+  orders.forEach(o => {
+    rows.push([
+      o.order_code, o.customer_name, o.customer_phone,
+      o.product_name, o.amount,
+      o.status === 'success' ? 'Đã Công Đức' : 'Chờ Công Đức',
+      (o.note || '').replace(/\|/g, ';'),
+      o.created_at, o.paid_at || ''
+    ]);
+  });
+  const csv = rows.map(r => r.map(c => '"' + String(c || '').replace(/"/g,'""') + '"').join(',')).join('\n');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="cong-duc-chua-dai-khanh.csv"');
+  res.send('\uFEFF' + csv); // BOM for Excel Vietnamese
+});
+
 app.post('/api/orders', (req, res) => {
   const { customer_name, customer_phone, product_id, product_name, amount, note } = req.body;
   if (!customer_name || !amount) return res.status(400).json({ error: 'Thiếu thông tin' });
@@ -257,7 +290,7 @@ app.listen(PORT, () => {
   console.log('══════════════════════════════════════════════════');
   console.log(`  🌐  Website:      http://localhost:${PORT}`);
   console.log(`  📊  Admin Panel:  http://localhost:${PORT}/admin`);
-  console.log(`  💳  Thanh toán:   http://localhost:${PORT}/thanh-toan`);
+  console.log(`  🪷  Công đức:     http://localhost:${PORT}/thanh-toan`);
   console.log(`  🔗  Webhook:      http://localhost:${PORT}/webhook/sepay`);
   console.log('══════════════════════════════════════════════════');
   if (!SEPAY_CONFIG.ACCOUNT_NUMBER) {
