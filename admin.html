@@ -218,6 +218,9 @@
   <div class="tab" onclick="switchTab('orders')" id="tab-orders">
     🧾 Đơn hàng <span id="cnt-orders" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
   </div>
+  <div class="tab" onclick="switchTab('security')" id="tab-security">
+    🔒 Bảo mật
+  </div>
 </div>
 
 <div class="content">
@@ -397,6 +400,37 @@
       <button class="btn btn-ghost" onclick="closeModal('order')">Huỷ</button>
       <button class="btn btn-primary" onclick="saveOrder()">💾 Lưu</button>
     </div>
+  </div>
+</div>
+
+<!-- ── PANEL BẢO MẬT ── -->
+<div class="panel" id="panel-security" style="display:none;max-width:480px;margin:32px auto">
+  <div class="card" style="background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 20px rgba(0,0,0,0.07);border:1px solid #e5d8c0">
+    <h2 style="font-family:'Cormorant Garamond',serif;color:#500a14;font-size:24px;margin-bottom:6px">🔒 Đổi mật khẩu</h2>
+    <p style="color:#888;font-size:13px;margin-bottom:24px">Mật khẩu mới phải khác mật khẩu cũ và có ít nhất 6 ký tự.</p>
+
+    <div id="pw-error" style="display:none;background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:12px 16px;color:#991b1b;font-size:13px;margin-bottom:16px"></div>
+    <div id="pw-success" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;color:#166534;font-size:13px;margin-bottom:16px"></div>
+
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:12px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Mật khẩu cũ</label>
+      <input type="password" id="pw-old" placeholder="Nhập mật khẩu hiện tại" style="width:100%;padding:12px 14px;border:1.5px solid #e5d8c0;border-radius:10px;font-size:14px;font-family:inherit;background:#faf5ea">
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:12px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Mật khẩu mới</label>
+      <input type="password" id="pw-new" placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)" style="width:100%;padding:12px 14px;border:1.5px solid #e5d8c0;border-radius:10px;font-size:14px;font-family:inherit;background:#faf5ea">
+    </div>
+    <div style="margin-bottom:24px">
+      <label style="display:block;font-size:12px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Xác nhận mật khẩu mới</label>
+      <input type="password" id="pw-confirm" placeholder="Nhập lại mật khẩu mới" style="width:100%;padding:12px 14px;border:1.5px solid #e5d8c0;border-radius:10px;font-size:14px;font-family:inherit;background:#faf5ea">
+    </div>
+
+    <button onclick="changePassword()" style="width:100%;padding:14px;background:linear-gradient(135deg,#7a0c1e,#500a14);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">
+      🔐 Cập nhật mật khẩu
+    </button>
+    <p style="margin-top:16px;font-size:12px;color:#aaa;text-align:center">
+      ⚠️ Sau khi đổi mật khẩu sẽ tự động đăng xuất — đăng nhập lại với mật khẩu mới.
+    </p>
   </div>
 </div>
 
@@ -812,6 +846,50 @@ async function deleteOrder(id) {
   await fetch('/api/orders/' + id, { method: 'DELETE' });
   loadOrders();
   toast('🗑️ Đã xoá đơn hàng');
+}
+
+// ─── ĐỔI MẬT KHẨU ────────────────────────────────────────────
+async function changePassword() {
+  const oldPass     = document.getElementById('pw-old').value.trim();
+  const newPass     = document.getElementById('pw-new').value.trim();
+  const confirmPass = document.getElementById('pw-confirm').value.trim();
+
+  const errEl = document.getElementById('pw-error');
+  const okEl  = document.getElementById('pw-success');
+  errEl.style.display = 'none';
+  okEl.style.display  = 'none';
+
+  function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
+  function showOk(msg)  { okEl.textContent  = msg; okEl.style.display  = 'block'; }
+
+  if (!oldPass || !newPass || !confirmPass) return showErr('❌ Vui lòng điền đầy đủ các trường.');
+  if (newPass.length < 6)   return showErr('❌ Mật khẩu mới phải có ít nhất 6 ký tự.');
+  if (newPass === oldPass)  return showErr('❌ Mật khẩu mới không được trùng mật khẩu cũ.');
+  if (newPass !== confirmPass) return showErr('❌ Mật khẩu xác nhận không khớp.');
+
+  const btn = document.querySelector('#panel-security button');
+  btn.disabled = true; btn.textContent = '⏳ Đang xử lý...';
+
+  try {
+    const res  = await fetch('/api/admin/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldPass, newPass, confirmPass })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showOk('✅ Đổi mật khẩu thành công! Đang chuyển về trang đăng nhập...');
+      document.getElementById('pw-old').value = '';
+      document.getElementById('pw-new').value = '';
+      document.getElementById('pw-confirm').value = '';
+      setTimeout(() => { window.location.href = '/admin/login'; }, 2000);
+    } else {
+      showErr('❌ ' + (data.error || 'Có lỗi xảy ra.'));
+    }
+  } catch(e) {
+    showErr('❌ Lỗi kết nối. Thử lại sau.');
+  }
+  btn.disabled = false; btn.textContent = '🔐 Cập nhật mật khẩu';
 }
 
 // ─── TOAST ────────────────────────────────────────────────────

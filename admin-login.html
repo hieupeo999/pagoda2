@@ -87,11 +87,15 @@
   <div class="title">Chùa Đại Khánh</div>
   <div class="subtitle">Trang quản trị – Chỉ dành cho Ban quản lý</div>
 
-  <div class="error" id="err-box">
-    ❌ Tài khoản hoặc mật khẩu không đúng. Vui lòng thử lại.
+  <div class="error" id="err-box">❌ Tài khoản hoặc mật khẩu không đúng.</div>
+  <div class="error" id="forgot-err-box" style="background:#fef9c3;border-color:#fbbf24;color:#92400e">
+    ⚠️ Gửi email thất bại. Kiểm tra cấu hình Gmail trên Railway.
+  </div>
+  <div id="forgot-ok-box" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;color:#166534;font-size:13px;margin-bottom:20px">
+    ✅ Đã gửi mật khẩu về <strong>minhhieubg99@gmail.com</strong>. Kiểm tra hộp thư nhé!
   </div>
 
-  <form method="POST" action="/admin/login">
+  <form method="POST" action="/admin/login" id="login-form">
     <div class="form-group">
       <label>Tài khoản</label>
       <input type="text" name="username" placeholder="Nhập tài khoản" required autocomplete="username">
@@ -103,14 +107,24 @@
     <button type="submit" class="btn">🔐 Đăng nhập</button>
   </form>
 
+  <form method="POST" action="/admin/forgot-password" style="margin-top:16px">
+    <button type="submit" style="width:100%;background:none;border:1.5px solid #e5d8c0;border-radius:10px;
+      padding:11px;color:#888;font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.2s"
+      onmouseover="this.style.borderColor='#7a0c1e';this.style.color='#7a0c1e'"
+      onmouseout="this.style.borderColor='#e5d8c0';this.style.color='#888'"
+      onclick="return confirm('Gửi mật khẩu về email minhhieubg99@gmail.com?')">
+      📧 Quên mật khẩu – Gửi về Gmail
+    </button>
+  </form>
+
   <div class="footer">🪷 Nam Mô A Di Đà Phật 🪷</div>
 </div>
 
 <script>
-  // Hiện thông báo lỗi nếu sai mật khẩu
-  if (new URLSearchParams(location.search).get('err') === '1') {
-    document.getElementById('err-box').classList.add('show');
-  }
+  const p = new URLSearchParams(location.search);
+  if (p.get('err') === '1') document.getElementById('err-box').classList.add('show');
+  if (p.get('forgot') === 'err') document.getElementById('forgot-err-box').classList.add('show');
+  if (p.get('forgot') === '1') document.getElementById('forgot-ok-box').style.display = 'block';
 </script>
 </body>
 </html>
