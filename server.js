@@ -5,6 +5,28 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ─── ADMIN BẢO MẬT ────────────────────────────────────────────
+const ADMIN_USER = 'admindchua';
+const ADMIN_PASS = '23061999';
+const ADMIN_TOKEN = Buffer.from(ADMIN_USER + ':' + ADMIN_PASS + ':chuaDK2026').toString('base64');
+
+function parseCookies(req) {
+  const list = {};
+  const h = req.headers.cookie;
+  if (!h) return list;
+  h.split(';').forEach(c => {
+    const [k, ...v] = c.split('=');
+    if (k) list[k.trim()] = decodeURIComponent(v.join('=').trim());
+  });
+  return list;
+}
+
+function requireAdmin(req, res, next) {
+  const cookies = parseCookies(req);
+  if (cookies.adm === ADMIN_TOKEN) return next();
+  res.redirect('/admin/login');
+}
+
 // ─── CẤU HÌNH SEPAY (VietinBank) ─────────────────────────────
 // Vào Sepay Dashboard → Tài khoản ngân hàng → lấy số TK VietinBank
 const SEPAY_CONFIG = {
@@ -76,9 +98,27 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
 // ─── ROUTES ───────────────────────────────────────────────────
-app.get('/',          (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/admin',     (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
-app.get('/thanh-toan',(req, res) => res.sendFile(path.join(__dirname, 'thanh-toan.html')));
+app.get('/',           (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/thanh-toan', (req, res) => res.sendFile(path.join(__dirname, 'thanh-toan.html')));
+
+// ─── ADMIN LOGIN ───────────────────────────────────────────────
+app.get('/admin/login', (req, res) => res.sendFile(path.join(__dirname, 'admin-login.html')));
+
+app.post('/admin/login', express.urlencoded({ extended: false }), (req, res) => {
+  const { username, password } = req.body;
+  if (username === ADMIN_USER && password === ADMIN_PASS) {
+    res.setHeader('Set-Cookie', `adm=${ADMIN_TOKEN}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`);
+    return res.redirect('/admin');
+  }
+  res.redirect('/admin/login?err=1');
+});
+
+app.get('/admin/logout', (req, res) => {
+  res.setHeader('Set-Cookie', 'adm=; HttpOnly; Path=/; Max-Age=0');
+  res.redirect('/admin/login');
+});
+
+app.get('/admin', requireAdmin, (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 
 // ─── API: CONFIG (cho trang công đức) ────────────────────────
 app.get('/api/config', (req, res) => {
