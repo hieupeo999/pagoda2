@@ -244,6 +244,121 @@
   .method-btn .method-icon { font-size: 22px; display: block; margin-bottom: 4px; }
   .method-btn .method-label { display: block; font-size: 11px; font-weight: 400; color: #888; margin-top: 2px; }
 
+  /* ── MODAL POPUP ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  .modal-box {
+    background: #fff;
+    border-radius: 20px;
+    padding: 28px 24px;
+    width: 100%; max-width: 440px;
+    max-height: 92vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { transform:translateY(30px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+  .modal-close {
+    position: absolute; top: 14px; right: 16px;
+    background: #f3f4f6; border: none; border-radius: 50%;
+    width: 32px; height: 32px; font-size: 16px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    color: #555; transition: background 0.2s;
+  }
+  .modal-close:hover { background: #fee2e2; color: var(--crimson); }
+  .modal-header { text-align: center; margin-bottom: 16px; }
+  .modal-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px; font-weight: 600; color: var(--crimson-dark);
+  }
+  .modal-method-label {
+    font-size: 13px; color: #777; margin-top: 4px;
+  }
+  .modal-order-info {
+    background: #fdf9f0; border: 1px dashed var(--gold);
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 8px;
+  }
+  .modal-order-info .order-code {
+    font-family: monospace; font-size: 18px; font-weight: 700;
+    color: var(--crimson); letter-spacing: 0.08em;
+  }
+  .modal-order-info .order-amount {
+    font-size: 20px; font-weight: 700; color: var(--crimson);
+  }
+  .modal-qr-wrap {
+    text-align: center; padding: 14px;
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 12px; margin-bottom: 14px;
+  }
+  .modal-qr-wrap img { max-width: 200px; width: 100%; border-radius: 8px; }
+  .modal-qr-note { font-size: 12px; color: #888; margin-top: 6px; }
+  .acct-box {
+    background: #f8f9fa; border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;
+  }
+  .acct-box .acct-title {
+    font-size: 12px; font-weight: 700; color: #888;
+    text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;
+  }
+  .acct-row {
+    display: flex; align-items: center;
+    justify-content: space-between; flex-wrap: wrap;
+    gap: 6px; margin-bottom: 8px;
+  }
+  .acct-row:last-child { margin-bottom: 0; }
+  .acct-label { font-size: 12px; color: #888; min-width: 90px; }
+  .acct-value { font-size: 14px; font-weight: 600; color: var(--ink); flex: 1; text-align: right; }
+  .acct-value.big {
+    font-size: 20px; font-family: monospace; color: var(--crimson);
+    letter-spacing: 0.05em;
+  }
+  .copy-stk-btn {
+    background: var(--crimson); color: #fff; border: none;
+    border-radius: 8px; padding: 5px 12px; font-size: 12px;
+    font-weight: 600; cursor: pointer; transition: background 0.2s; white-space: nowrap;
+  }
+  .copy-stk-btn:hover { background: var(--crimson-dark); }
+  .copy-stk-btn.copied { background: #166534; }
+  .modal-transfer-box {
+    background: #fff3cd; border: 1px solid var(--gold);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;
+  }
+  .modal-transfer-box .transfer-label { font-size: 12px; color: #856404; margin-bottom: 4px; font-weight: 600; }
+  .modal-transfer-box .transfer-code {
+    font-size: 16px; font-weight: 700; color: var(--crimson-dark);
+    font-family: monospace; letter-spacing: 0.05em;
+  }
+  .modal-status {
+    display: flex; align-items: center; gap: 10px;
+    background: #fef9c3; border: 1px solid #fbbf24;
+    border-radius: 10px; padding: 12px 14px; font-size: 13px; margin-bottom: 10px;
+  }
+  .modal-manual {
+    background: #f0fdf4; border: 1px solid #bbf7d0;
+    border-radius: 10px; padding: 12px 14px;
+    font-size: 13px; color: #166534; line-height: 1.7; margin-bottom: 10px;
+  }
+  .modal-success { text-align: center; padding: 10px 0; }
+  .modal-success .s-icon { font-size: 56px; margin-bottom: 10px; }
+  .modal-success .s-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 24px; color: #166534; font-weight: 600; margin-bottom: 6px;
+  }
+  .modal-success .s-detail {
+    background: #f0fdf4; border: 1px solid #bbf7d0;
+    border-radius: 10px; padding: 12px 14px; margin: 14px 0;
+    text-align: left; font-size: 13px; line-height: 1.9;
+  }
+
   /* ── Config warning ── */
   .config-warning {
     background: #fff3cd;
@@ -397,58 +512,11 @@
         </button>
       </div>
 
-      <!-- QR Section -->
-      <div class="card" id="qr-section">
-        <div class="card-title">📱 Quét QR Công Đức</div>
-
-        <div class="order-info">
-          <span style="font-size:13px;color:#666">Mã đơn:</span>
-          <span class="code" id="display-code">DK12345678</span>
-          <span style="font-size:13px;color:#888;display:block;margin-top:4px" id="display-method"></span>
-          <span style="font-size:13px;color:#666;display:block;margin-top:6px">Số tiền công đức:</span>
-          <span class="amount" id="display-amount">—</span>
-        </div>
-
-        <div class="qr-wrap">
-          <img id="qr-img" src="" alt="QR Công Đức">
-          <p class="qr-note">Quét bằng app ngân hàng bất kỳ hoặc VNPAY, MoMo</p>
-        </div>
-
-        <div class="transfer-content">
-          📝 <strong>Nội dung chuyển khoản:</strong><br>
-          <strong id="display-content">DK12345678</strong>
-          <button class="copy-btn" onclick="copyContent()">📋 Copy</button>
-          <div style="font-size:12px;color:#856404;margin-top:6px">
-            ⚠️ Điền đúng nội dung này để hệ thống tự xác nhận
-          </div>
-        </div>
-
-        <div class="status-bar" id="status-bar">
-          <div class="spinner"></div>
-          <span>Đang chờ xác nhận Công Đức...</span>
-        </div>
-
-        <div id="manual-note" style="display:none;margin-top:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;font-size:13px;color:#166534;line-height:1.7">
-          🙏 <strong>Agribank – Sư Trụ Trì:</strong><br>
-          Sau khi chuyển khoản, nhà chùa sẽ xác nhận và liên hệ lại qua số điện thoại của quý phật tử trong vòng 24 giờ.
-        </div>
-      </div>
     </div>
 
-    <!-- ── RIGHT: Success or Info ── -->
+    <!-- ── RIGHT: Info ── -->
     <div>
-      <!-- Success -->
-      <div class="card" id="success-section">
-        <div class="success-card">
-          <div class="success-icon">🙏</div>
-          <div class="success-title">Nam Mô A Di Đà Phật</div>
-          <p class="success-msg">Cảm ơn tấm lòng thành kính của quý phật tử.<br>Công đức đã được xác nhận thành công.</p>
-          <div class="success-detail" id="success-detail"></div>
-          <a href="/thanh-toan" class="btn-new">🙏 Công Đức thêm</a>
-        </div>
-      </div>
-
-      <!-- How-to info (shown before submit) -->
+      <!-- How-to info -->
       <div id="howto-section">
         <div class="card">
           <div class="card-title" style="font-size:18px">📖 Hướng dẫn Công Đức</div>
@@ -476,6 +544,85 @@
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- ══════════════ PAYMENT MODAL ══════════════ -->
+<div id="payment-modal" class="modal-overlay" style="display:none" onclick="handleOverlayClick(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+
+    <!-- Header -->
+    <div class="modal-header">
+      <div class="modal-title">🙏 Thông tin Công Đức</div>
+      <div class="modal-method-label" id="m-method-label"></div>
+    </div>
+
+    <!-- Order info -->
+    <div class="modal-order-info">
+      <div>
+        <div style="font-size:12px;color:#888">Mã đơn</div>
+        <div class="order-code" id="m-code">—</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:12px;color:#888">Số tiền</div>
+        <div class="order-amount" id="m-amount">—</div>
+      </div>
+    </div>
+
+    <!-- QR (chỉ Sepay) -->
+    <div class="modal-qr-wrap" id="m-qr-wrap">
+      <img id="m-qr-img" src="" alt="QR Công Đức">
+      <p class="modal-qr-note">📱 Quét bằng app ngân hàng bất kỳ hoặc VNPAY, MoMo</p>
+    </div>
+
+    <!-- Thông tin tài khoản -->
+    <div class="acct-box">
+      <div class="acct-title">Thông tin tài khoản ngân hàng</div>
+      <div class="acct-row">
+        <span class="acct-label">Ngân hàng</span>
+        <span class="acct-value" id="m-bank-name">—</span>
+      </div>
+      <div class="acct-row">
+        <span class="acct-label">Số tài khoản</span>
+        <span class="acct-value big" id="m-acct-num">—</span>
+        <button class="copy-stk-btn" id="btn-copy-stk" onclick="copySTK()">📋 Copy STK</button>
+      </div>
+      <div class="acct-row">
+        <span class="acct-label">Chủ tài khoản</span>
+        <span class="acct-value" id="m-acct-name">—</span>
+      </div>
+    </div>
+
+    <!-- Nội dung chuyển khoản -->
+    <div class="modal-transfer-box">
+      <div class="transfer-label">📝 Nội dung chuyển khoản (bắt buộc điền đúng)</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+        <span class="transfer-code" id="m-content">—</span>
+        <button class="copy-stk-btn" id="btn-copy-content" onclick="copyContent()">📋 Copy</button>
+      </div>
+    </div>
+
+    <!-- Trạng thái chờ Sepay -->
+    <div class="modal-status" id="m-status">
+      <div class="spinner"></div>
+      <span>Đang chờ xác nhận thanh toán tự động...</span>
+    </div>
+
+    <!-- Ghi chú Agribank -->
+    <div class="modal-manual" id="m-manual" style="display:none">
+      🙏 <strong>Chuyển khoản Agribank – Sư Trụ Trì:</strong><br>
+      Sau khi chuyển khoản xong, nhà chùa sẽ xác nhận và liên hệ lại qua số điện thoại của quý phật tử trong vòng <strong>24 giờ</strong>.
+    </div>
+
+    <!-- Thành công -->
+    <div class="modal-success" id="m-success" style="display:none">
+      <div class="s-icon">🙏</div>
+      <div class="s-title">Nam Mô A Di Đà Phật</div>
+      <p style="color:#555;font-size:14px;line-height:1.7;margin-bottom:12px">Cảm ơn tấm lòng thành kính.<br>Công đức đã được xác nhận thành công!</p>
+      <div class="s-detail" id="m-success-detail"></div>
+      <a href="/thanh-toan" class="btn-new" style="margin-top:16px;display:inline-block">🙏 Công Đức thêm</a>
+    </div>
   </div>
 </div>
 
@@ -643,47 +790,68 @@ async function submitOrder() {
   }
 }
 
-// ─── SHOW QR ──────────────────────────────────────────────────
+// ─── MODAL CONTROLS ───────────────────────────────────────────
+function openModal() {
+  document.getElementById('payment-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+  document.getElementById('payment-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  clearInterval(pollInterval);
+}
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('payment-modal')) closeModal();
+}
+
+// ─── SHOW QR / POPUP ──────────────────────────────────────────
 function showQR(orderCode, amount, name, productName, members) {
-  document.getElementById('form-section').style.display = 'none';
-  document.getElementById('howto-section').style.display = 'none';
-  document.getElementById('qr-section').style.display = '';
+  // Reset modal state
+  document.getElementById('m-success').style.display = 'none';
+  document.getElementById('m-status').style.display = '';
+  document.getElementById('m-manual').style.display = 'none';
+  document.getElementById('m-qr-wrap').style.display = '';
 
-  document.getElementById('display-code').textContent = orderCode;
-  document.getElementById('display-amount').textContent = fmt(amount);
-  document.getElementById('display-content').textContent = orderCode;
-
-  // Chọn thông tin ngân hàng theo phương thức
-  let bankId, acctNum, acctName, methodLabel;
+  // Chọn thông tin ngân hàng
+  let bankId, acctNum, acctName, bankDisplayName, methodLabel;
   if (selectedMethod === 'agribank') {
     const ag = bankConfig.agribank || {};
-    bankId    = ag.bankId        || 'agribank';
-    acctNum   = ag.accountNumber || '2608205306753';
-    acctName  = ag.accountName   || 'NGUYEN THI BAC';
-    methodLabel = '🙏 Agribank – Sư Trụ Trì (Nguyễn Thị Bắc)';
+    bankId          = ag.bankId        || 'agribank';
+    acctNum         = ag.accountNumber || '2608205306753';
+    acctName        = ag.accountName   || 'NGUYEN THI BAC';
+    bankDisplayName = 'Agribank';
+    methodLabel     = '🙏 Chuyển khoản Agribank – Sư Trụ Trì';
   } else {
     const sp = bankConfig.sepay || {};
-    bankId    = sp.bankId        || 'vietinbank';
-    acctNum   = sp.accountNumber || '0000000000';
-    acctName  = sp.accountName   || 'CHUA DAI KHANH';
-    methodLabel = '🏦 Sepay – VietinBank (tự động xác nhận)';
+    bankId          = sp.bankId        || 'vietinbank';
+    acctNum         = sp.accountNumber || '102506196666';
+    acctName        = sp.accountName   || 'NGUYEN MINH HIEU';
+    bankDisplayName = 'VietinBank';
+    methodLabel     = '🏦 Quét QR / Chuyển khoản VietinBank – Tự động xác nhận';
   }
 
-  // Hiển thị nhãn phương thức
-  const methodEl = document.getElementById('display-method');
-  if (methodEl) methodEl.textContent = methodLabel;
+  // Điền thông tin vào modal
+  document.getElementById('m-method-label').textContent = methodLabel;
+  document.getElementById('m-code').textContent         = orderCode;
+  document.getElementById('m-amount').textContent       = fmt(amount);
+  document.getElementById('m-bank-name').textContent    = bankDisplayName;
+  document.getElementById('m-acct-num').textContent     = acctNum;
+  document.getElementById('m-acct-name').textContent    = acctName;
+  document.getElementById('m-content').textContent      = orderCode;
 
+  // QR
   const qrUrl = `https://img.vietqr.io/image/${bankId}-${acctNum}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(orderCode)}&accountName=${encodeURIComponent(acctName)}`;
-  document.getElementById('qr-img').src = qrUrl;
+  document.getElementById('m-qr-img').src = qrUrl;
 
-  // Agribank: không có webhook → hiện ghi chú thủ công
-  const manualNote = document.getElementById('manual-note');
-  if (manualNote) manualNote.style.display = selectedMethod === 'agribank' ? '' : 'none';
-
-  // Chỉ poll nếu dùng Sepay (có webhook)
-  if (selectedMethod === 'sepay') {
+  // Agribank: ẩn trạng thái tự động, hiện ghi chú thủ công
+  if (selectedMethod === 'agribank') {
+    document.getElementById('m-status').style.display = 'none';
+    document.getElementById('m-manual').style.display = '';
+  } else {
     startPolling(orderCode);
   }
+
+  openModal();
 }
 
 // ─── POLLING ──────────────────────────────────────────────────
@@ -702,29 +870,45 @@ function startPolling(orderCode) {
 
 // ─── SUCCESS ──────────────────────────────────────────────────
 function showSuccess(order) {
-  document.getElementById('qr-section').style.display = 'none';
-  document.getElementById('success-section').style.display = '';
+  document.getElementById('m-qr-wrap').style.display   = 'none';
+  document.getElementById('m-status').style.display    = 'none';
+  document.getElementById('m-manual').style.display    = 'none';
+  document.getElementById('m-success').style.display   = '';
 
-  const paidAt = order.paid_at ? new Date(order.paid_at).toLocaleString('vi-VN') : new Date().toLocaleString('vi-VN');
+  const paidAt = order.paid_at
+    ? new Date(order.paid_at).toLocaleString('vi-VN')
+    : new Date().toLocaleString('vi-VN');
   const familyLines = (order.note || '').split(' | ').filter(Boolean)
     .map(l => `<div>🙏 ${l}</div>`).join('');
 
-  document.getElementById('success-detail').innerHTML = `
+  document.getElementById('m-success-detail').innerHTML = `
     <div>🧾 <strong>Mã đơn:</strong> ${order.order_code}</div>
     <div>📿 <strong>Nghi lễ:</strong> ${order.product_name || '—'}</div>
     <div>💰 <strong>Công đức:</strong> ${fmt(order.amount)}</div>
     <div>✅ <strong>Xác nhận lúc:</strong> ${paidAt}</div>
-    ${familyLines ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #bbf7d0"><strong>🙏 Danh sách gia đình:</strong>${familyLines}</div>` : ''}
+    ${familyLines ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #bbf7d0"><strong>🙏 Gia đình:</strong>${familyLines}</div>` : ''}
   `;
 }
 
-// ─── COPY ─────────────────────────────────────────────────────
-function copyContent() {
-  const text = document.getElementById('display-content').textContent;
+// ─── COPY STK ─────────────────────────────────────────────────
+function copySTK() {
+  const text = document.getElementById('m-acct-num').textContent;
   navigator.clipboard.writeText(text).then(() => {
-    const btn = document.querySelector('.copy-btn');
+    const btn = document.getElementById('btn-copy-stk');
     btn.textContent = '✅ Đã copy!';
-    setTimeout(() => btn.textContent = '📋 Copy', 2000);
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 Copy STK'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ─── COPY NỘI DUNG CK ─────────────────────────────────────────
+function copyContent() {
+  const text = document.getElementById('m-content').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-copy-content');
+    btn.textContent = '✅ Đã copy!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 Copy'; btn.classList.remove('copied'); }, 2000);
   });
 }
 </script>
