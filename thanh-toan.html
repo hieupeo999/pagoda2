@@ -881,9 +881,7 @@ function closeModal() {
   document.getElementById('payment-modal').style.display = 'none';
   document.body.style.overflow = '';
   clearInterval(pollInterval);
-  // Hiện toast cảm ơn khi đóng popup (trừ khi đã thành công)
-  const successVisible = document.getElementById('m-success').style.display !== 'none';
-  if (!successVisible) showThankYouToast();
+  // Chỉ đóng im lặng — cảm ơn chỉ hiện khi xác nhận CK xong
 }
 
 function showThankYouToast() {
@@ -897,7 +895,7 @@ function showThankYouToast() {
   }, 4000);
 }
 function handleOverlayClick(e) {
-  if (e.target === document.getElementById('payment-modal')) closeModal();
+  // Không đóng khi click ra ngoài — phải nhấn nút ✕
 }
 
 // ─── SHOW QR / POPUP ──────────────────────────────────────────
