@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel – Chùa Đại Khánh</title>
+
+<style>
+  :root {
+    --crimson: #7a0c1e;
+    --crimson-dark: #500a14;
+    --gold: #c9921f;
+    --gold-light: #e8b84b;
+    --cream: #faf5ea;
+    --ink: #1a0d05;
+    --success: #166534;
+    --success-bg: #dcfce7;
+    --pending-bg: #fef9c3;
+    --pending: #854d0e;
+    --danger: #991b1b;
+    --danger-bg: #fee2e2;
+    --border: #e5d8c0;
+    --card: #fff;
+    --gray: #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f0e8; color: var(--ink); min-height: 100vh; }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, var(--crimson-dark), var(--crimson));
+    color: #fff;
+    padding: 0 24px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    position: sticky; top: 0; z-index: 100;
+  }
+  header h1 { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  header h1 span { font-size: 22px; }
+  .header-meta { font-size: 12px; color: rgba(255,255,255,0.7); }
+  .header-link { color: var(--gold-light); text-decoration: none; font-size: 13px; margin-left: 16px; }
+  .header-link:hover { text-decoration: underline; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 0; background: var(--crimson-dark); padding: 0 24px; }
+  .tab {
+    padding: 12px 24px;
+    cursor: pointer;
+    color: rgba(255,255,255,0.65);
+    font-size: 14px;
+    font-weight: 500;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    user-select: none;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .tab:hover { color: #fff; background: rgba(255,255,255,0.05); }
+  .tab.active { color: var(--gold-light); border-bottom-color: var(--gold-light); background: rgba(255,255,255,0.08); }
+
+  /* ── Content ── */
+  .content { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── Stats bar ── */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .stat-card .label { font-size: 12px; color: var(--gray); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-card .value { font-size: 28px; font-weight: 700; color: var(--crimson); margin-top: 4px; }
+  .stat-card .sub { font-size: 12px; color: var(--gray); margin-top: 2px; }
+
+  /* ── Toolbar ── */
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+  .toolbar-left { display: flex; gap: 10px; align-items: center; }
+  .search-input {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    width: 240px;
+    background: #fff;
+  }
+  .search-input:focus { outline: none; border-color: var(--gold); }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.18s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { background: var(--crimson); color: #fff; }
+  .btn-primary:hover { background: var(--crimson-dark); transform: translateY(-1px); }
+  .btn-success { background: #16a34a; color: #fff; font-size: 12px; padding: 5px 12px; }
+  .btn-success:hover { background: #166534; }
+  .btn-warning { background: var(--gold); color: #fff; font-size: 12px; padding: 5px 12px; }
+  .btn-warning:hover { background: #a87a18; }
+  .btn-danger { background: var(--danger); color: #fff; font-size: 12px; padding: 5px 12px; }
+  .btn-danger:hover { background: #7f1d1d; }
+  .btn-ghost { background: transparent; color: var(--gray); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--border); }
+
+  /* ── Table ── */
+  .table-wrap { background: var(--card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: #f9f5ee; }
+  th { padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: var(--gray); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
+  td { padding: 12px 16px; font-size: 14px; border-bottom: 1px solid #f0ead8; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fdfaf3; }
+
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  }
+  .badge-success { background: var(--success-bg); color: var(--success); }
+  .badge-pending { background: var(--pending-bg); color: var(--pending); }
+  .badge-danger  { background: var(--danger-bg); color: var(--danger); }
+  .badge-gray    { background: #f3f4f6; color: var(--gray); }
+
+  .actions { display: flex; gap: 6px; }
+  .empty-state { text-align: center; padding: 48px; color: var(--gray); }
+  .empty-state .icon { font-size: 36px; margin-bottom: 8px; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 500;
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px;
+    width: 100%; max-width: 500px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--crimson-dark); display: flex; align-items: center; gap: 8px; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
+  .form-group input, .form-group textarea, .form-group select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+    outline: none; border-color: var(--crimson);
+  }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: #1a1a1a; color: #fff;
+    padding: 12px 20px; border-radius: 10px;
+    font-size: 14px; z-index: 9999;
+    transform: translateY(100px); opacity: 0;
+    transition: all 0.3s ease;
+    max-width: 320px;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { background: #166534; }
+  #toast.error   { background: #991b1b; }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .content { padding: 12px; }
+    .form-row { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>🏛️</span> Chùa Đại Khánh – Admin Panel</h1>
+  <div>
+    <a href="/" class="header-link">← Website</a>
+    <a href="/thanh-toan" class="header-link">💳 Trang thanh toán</a>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('products')" id="tab-products">
+    🙏 Dịch vụ <span id="cnt-products" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
+  </div>
+  <div class="tab" onclick="switchTab('customers')" id="tab-customers">
+    👥 Phật tử <span id="cnt-customers" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
+  </div>
+  <div class="tab" onclick="switchTab('orders')" id="tab-orders">
+    🧾 Đơn hàng <span id="cnt-orders" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ── PRODUCTS ── -->
+  <div class="panel active" id="panel-products">
+    <div class="stats" id="stats-products"></div>
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <input class="search-input" type="text" placeholder="🔍 Tìm dịch vụ..." oninput="filterTable('products-table', this.value)">
+      </div>
+      <button class="btn btn-primary" onclick="openModal('product')">+ Thêm dịch vụ</button>
+    </div>
+    <div class="table-wrap">
+      <table id="products-table">
+        <thead><tr>
+          <th>ID</th><th>Tên dịch vụ</th><th>Công đức</th><th>Mô tả</th><th>Ngày tạo</th><th>Thao tác</th>
+        </tr></thead>
+        <tbody id="products-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── CUSTOMERS ── -->
+  <div class="panel" id="panel-customers">
+    <div class="stats" id="stats-customers"></div>
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <input class="search-input" type="text" placeholder="🔍 Tìm phật tử..." oninput="filterTable('customers-table', this.value)">
+      </div>
+      <button class="btn btn-primary" onclick="openModal('customer')">+ Thêm phật tử</button>
+    </div>
+    <div class="table-wrap">
+      <table id="customers-table">
+        <thead><tr>
+          <th>ID</th><th>Họ tên</th><th>Điện thoại</th><th>Zalo</th><th>Email</th><th>Ngày đăng ký</th><th>Thao tác</th>
+        </tr></thead>
+        <tbody id="customers-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── ORDERS ── -->
+  <div class="panel" id="panel-orders">
+    <div class="stats" id="stats-orders"></div>
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <input class="search-input" type="text" placeholder="🔍 Tìm đơn hàng..." oninput="filterTable('orders-table', this.value)">
+        <select id="order-filter" onchange="loadOrders()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;">
+          <option value="">Tất cả trạng thái</option>
+          <option value="pending">Chờ Công Đức</option>
+          <option value="success">Đã Công Đức</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('order')">+ Thêm đơn hàng</button>
+    </div>
+    <div class="table-wrap">
+      <table id="orders-table">
+        <thead><tr>
+          <th>Mã đơn</th><th>Phật tử</th><th>SĐT</th><th>Dịch vụ</th><th>Công đức</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th>
+        </tr></thead>
+        <tbody id="orders-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── MODAL PRODUCT ── -->
+<div class="modal-overlay" id="modal-product">
+  <div class="modal">
+    <h2>🙏 <span id="modal-product-title">Thêm dịch vụ</span></h2>
+    <input type="hidden" id="product-id">
+    <div class="form-group">
+      <label>Tên dịch vụ *</label>
+      <input type="text" id="product-name" placeholder="VD: Dâng sớ cầu an">
+    </div>
+    <div class="form-group">
+      <label>Công đức (VNĐ, để 0 = Tùy tâm phật tử)</label>
+      <input type="number" id="product-price" placeholder="0" min="0">
+    </div>
+    <div class="form-group">
+      <label>Mô tả</label>
+      <textarea id="product-description" placeholder="Mô tả ngắn về dịch vụ..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('product')">Huỷ</button>
+      <button class="btn btn-primary" onclick="saveProduct()">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL CUSTOMER ── -->
+<div class="modal-overlay" id="modal-customer">
+  <div class="modal">
+    <h2>🙏 <span id="modal-customer-title">Thêm phật tử</span></h2>
+    <input type="hidden" id="customer-id">
+    <div class="form-group">
+      <label>Họ tên *</label>
+      <input type="text" id="customer-name" placeholder="Nguyễn Văn A">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Số điện thoại</label>
+        <input type="tel" id="customer-phone" placeholder="0912345678">
+      </div>
+      <div class="form-group">
+        <label>Zalo</label>
+        <input type="text" id="customer-zalo" placeholder="0912345678">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="customer-email" placeholder="email@gmail.com">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('customer')">Huỷ</button>
+      <button class="btn btn-primary" onclick="saveCustomer()">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL ORDER ── -->
+<div class="modal-overlay" id="modal-order">
+  <div class="modal">
+    <h2>🧾 <span id="modal-order-title">Thêm đơn hàng</span></h2>
+    <input type="hidden" id="order-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Họ tên phật tử *</label>
+        <input type="text" id="order-customer-name" placeholder="Nguyễn Văn A">
+      </div>
+      <div class="form-group">
+        <label>Số điện thoại</label>
+        <input type="tel" id="order-customer-phone" placeholder="0912345678">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Dịch vụ</label>
+      <select id="order-product" onchange="autoFillPrice()">
+        <option value="">-- Chọn dịch vụ --</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Số tiền công đức (VNĐ) *</label>
+        <input type="number" id="order-amount" placeholder="100000" min="0">
+      </div>
+      <div class="form-group" id="order-status-group" style="display:none;">
+        <label>Trạng thái</label>
+        <select id="order-status">
+          <option value="pending">Chờ Công Đức</option>
+          <option value="success">Đã Công Đức</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Ghi chú</label>
+      <input type="text" id="order-note" placeholder="Ghi chú thêm...">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('order')">Huỷ</button>
+      <button class="btn btn-primary" onclick="saveOrder()">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────
+let productsData = [];
+let customersData = [];
+let ordersData = [];
+
+// ─── INIT ────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  loadAll();
+  setInterval(loadOrders, 8000); // auto-refresh orders every 8s
+});
+
+function loadAll() {
+  loadProducts();
+  loadCustomers();
+  loadOrders();
+}
+
+// ─── TABS ─────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ─── SEARCH FILTER ────────────────────────────────────────────
+function filterTable(tableId, query) {
+  const q = query.toLowerCase();
+  document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+// ─── FORMAT ───────────────────────────────────────────────────
+function fmt(n) {
+  const num = Number(n || 0);
+  return num === 0 ? '<span style="color:#854d0e;font-style:italic">Tùy tâm</span>' : num.toLocaleString('vi-VN') + 'đ';
+}
+function fmtAmt(n) {
+  const num = Number(n || 0);
+  return num === 0 ? 'Tùy tâm' : num.toLocaleString('vi-VN') + 'đ';
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('vi-VN') + ' ' + dt.toTimeString().slice(0, 5);
+}
+function statusBadge(s) {
+  if (s === 'success') return '<span class="badge badge-success">✅ Đã Công Đức</span>';
+  if (s === 'pending')  return '<span class="badge badge-pending">⏳ Chờ Công Đức</span>';
+  return '<span class="badge badge-gray">' + s + '</span>';
+}
+
+// ─── DỊCH VỤ ──────────────────────────────────────────────────
+async function loadProducts() {
+  const data = await fetch('/api/products').then(r => r.json());
+  productsData = data;
+  document.getElementById('cnt-products').textContent = data.length;
+
+  document.getElementById('stats-products').innerHTML = `
+    <div class="stat-card"><div class="label">Tổng dịch vụ</div><div class="value">${data.length}</div></div>
+    <div class="stat-card"><div class="label">Tùy tâm phật tử</div><div class="value">${data.filter(p => p.price === 0).length}</div></div>
+  `;
+
+  const tbody = document.getElementById('products-body');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="icon">🙏</div>Chưa có dịch vụ nào</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(p => `
+    <tr>
+      <td><span style="color:var(--gray);font-size:12px">#${p.id}</span></td>
+      <td><strong>${p.name}</strong></td>
+      <td style="color:var(--crimson);font-weight:600">${fmt(p.price)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gray)">${p.description || '—'}</td>
+      <td style="color:var(--gray);font-size:13px">${fmtDate(p.created_at)}</td>
+      <td><div class="actions">
+        <button class="btn btn-warning" onclick="editProduct(${p.id})">✏️ Sửa</button>
+        <button class="btn btn-danger"  onclick="deleteProduct(${p.id})">🗑️</button>
+      </div></td>
+    </tr>
+  `).join('');
+}
+
+function openModal(type) {
+  document.getElementById('modal-' + type).classList.add('open');
+  if (type === 'order') populateProductSelect();
+}
+function closeModal(type) {
+  document.getElementById('modal-' + type).classList.remove('open');
+  clearForm(type);
+}
+
+function clearForm(type) {
+  if (type === 'product') {
+    ['product-id','product-name','product-price','product-quantity','product-description']
+      .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('modal-product-title').textContent = 'Thêm dịch vụ';
+  }
+  if (type === 'customer') {
+    ['customer-id','customer-name','customer-phone','customer-zalo','customer-email']
+      .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('modal-customer-title').textContent = 'Thêm phật tử';
+  }
+  if (type === 'order') {
+    ['order-id','order-customer-name','order-customer-phone','order-amount','order-note']
+      .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('order-product').value = '';
+    document.getElementById('order-status').value = 'pending';
+    document.getElementById('order-status-group').style.display = 'none';
+    document.getElementById('modal-order-title').textContent = 'Thêm đơn hàng';
+  }
+}
+
+function editProduct(id) {
+  const p = productsData.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('product-id').value = p.id;
+  document.getElementById('product-name').value = p.name;
+  document.getElementById('product-price').value = p.price;
+  document.getElementById('product-quantity').value = p.quantity;
+  document.getElementById('product-description').value = p.description || '';
+  document.getElementById('modal-product-title').textContent = 'Chỉnh sửa dịch vụ';
+  openModal('product');
+}
+
+async function saveProduct() {
+  const id = document.getElementById('product-id').value;
+  const name = document.getElementById('product-name').value.trim();
+  const price = parseInt(document.getElementById('product-price').value) || 0;
+  const description = document.getElementById('product-description').value.trim();
+  if (!name) return toast('Vui lòng nhập tên dịch vụ', 'error');
+
+  const url = id ? '/api/products/' + id : '/api/products';
+  const method = id ? 'PUT' : 'POST';
+  await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, price, description, quantity: -1}) });
+  closeModal('product');
+  loadProducts();
+  toast(id ? '✅ Đã cập nhật dịch vụ' : '✅ Đã thêm dịch vụ mới', 'success');
+}
+
+async function deleteProduct(id) {
+  if (!confirm('Xoá dịch vụ này?')) return;
+  await fetch('/api/products/' + id, { method: 'DELETE' });
+  loadProducts();
+  toast('🗑️ Đã xoá dịch vụ');
+}
+
+// ─── PHẬT TỬ ──────────────────────────────────────────────────
+async function loadCustomers() {
+  const data = await fetch('/api/customers').then(r => r.json());
+  customersData = data;
+  document.getElementById('cnt-customers').textContent = data.length;
+
+  document.getElementById('stats-customers').innerHTML = `
+    <div class="stat-card"><div class="label">Tổng phật tử</div><div class="value">${data.length}</div></div>
+    <div class="stat-card"><div class="label">Có số điện thoại</div><div class="value">${data.filter(c => c.phone).length}</div></div>
+    <div class="stat-card"><div class="label">Có Zalo</div><div class="value">${data.filter(c => c.zalo).length}</div></div>
+  `;
+
+  const tbody = document.getElementById('customers-body');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="icon">🙏</div>Chưa có phật tử nào</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(c => `
+    <tr>
+      <td><span style="color:var(--gray);font-size:12px">#${c.id}</span></td>
+      <td><strong>${c.name}</strong></td>
+      <td>${c.phone || '—'}</td>
+      <td>${c.zalo || '—'}</td>
+      <td>${c.email || '—'}</td>
+      <td style="color:var(--gray);font-size:13px">${fmtDate(c.registered_at)}</td>
+      <td><div class="actions">
+        <button class="btn btn-warning" onclick="editCustomer(${c.id})">✏️ Sửa</button>
+        <button class="btn btn-danger"  onclick="deleteCustomer(${c.id})">🗑️</button>
+      </div></td>
+    </tr>
+  `).join('');
+}
+
+function editCustomer(id) {
+  const c = customersData.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('customer-id').value = c.id;
+  document.getElementById('customer-name').value = c.name;
+  document.getElementById('customer-phone').value = c.phone || '';
+  document.getElementById('customer-zalo').value = c.zalo || '';
+  document.getElementById('customer-email').value = c.email || '';
+  document.getElementById('modal-customer-title').textContent = 'Chỉnh sửa phật tử';
+  openModal('customer');
+}
+
+async function saveCustomer() {
+  const id = document.getElementById('customer-id').value;
+  const name = document.getElementById('customer-name').value.trim();
+  const phone = document.getElementById('customer-phone').value.trim();
+  const zalo  = document.getElementById('customer-zalo').value.trim();
+  const email = document.getElementById('customer-email').value.trim();
+  if (!name) return toast('Vui lòng nhập họ tên', 'error');
+
+  const url = id ? '/api/customers/' + id : '/api/customers';
+  const method = id ? 'PUT' : 'POST';
+  await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, phone, zalo, email}) });
+  closeModal('customer');
+  loadCustomers();
+  toast(id ? '✅ Đã cập nhật phật tử' : '✅ Đã thêm phật tử mới', 'success');
+}
+
+async function deleteCustomer(id) {
+  if (!confirm('Xoá phật tử này?')) return;
+  await fetch('/api/customers/' + id, { method: 'DELETE' });
+  loadCustomers();
+  toast('🗑️ Đã xoá phật tử');
+}
+
+// ─── ORDERS ───────────────────────────────────────────────────
+async function loadOrders() {
+  const statusFilter = document.getElementById('order-filter')?.value || '';
+  const data = await fetch('/api/orders').then(r => r.json());
+  ordersData = data;
+
+  const filtered = statusFilter ? data.filter(o => o.status === statusFilter) : data;
+  document.getElementById('cnt-orders').textContent = data.length;
+
+  const totalRevenue = data.filter(o => o.status === 'success').reduce((s, o) => s + (o.amount || 0), 0);
+  const pending  = data.filter(o => o.status === 'pending').length;
+  const success  = data.filter(o => o.status === 'success').length;
+
+  document.getElementById('stats-orders').innerHTML = `
+    <div class="stat-card"><div class="label">Tổng đơn</div><div class="value">${data.length}</div></div>
+    <div class="stat-card"><div class="label">Đã Công Đức</div><div class="value" style="color:#166534">${success}</div></div>
+    <div class="stat-card"><div class="label">Chờ Công Đức</div><div class="value" style="color:#854d0e">${pending}</div></div>
+    <div class="stat-card"><div class="label">Tổng Công Đức nhận</div><div class="value" style="font-size:20px;color:var(--crimson)">${fmtAmt(totalRevenue)}</div></div>
+  `;
+
+  const tbody = document.getElementById('orders-body');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="icon">🧾</div>Chưa có đơn hàng nào</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(o => `
+    <tr>
+      <td><code style="font-size:13px;color:var(--crimson);font-weight:600">${o.order_code}</code></td>
+      <td><strong>${o.customer_name || '—'}</strong></td>
+      <td>${o.customer_phone || '—'}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.product_name || '—'}</td>
+      <td style="font-weight:600;color:var(--crimson)">${fmtAmt(o.amount)}</td>
+      <td>${statusBadge(o.status)}</td>
+      <td style="color:var(--gray);font-size:13px">${fmtDate(o.created_at)}</td>
+      <td><div class="actions">
+        ${o.status === 'pending' ? `<button class="btn btn-success" onclick="markPaid(${o.id})">✅ Xác nhận CĐ</button>` : ''}
+        <button class="btn btn-warning" onclick="editOrder(${o.id})">✏️</button>
+        <button class="btn btn-danger"  onclick="deleteOrder(${o.id})">🗑️</button>
+      </div></td>
+    </tr>
+  `).join('');
+}
+
+function populateProductSelect() {
+  const sel = document.getElementById('order-product');
+  sel.innerHTML = '<option value="">-- Chọn dịch vụ --</option>';
+  productsData.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.dataset.price = p.price;
+    opt.dataset.name = p.name;
+    opt.textContent = p.name + ' – ' + fmtAmt(p.price);
+    sel.appendChild(opt);
+  });
+}
+
+function autoFillPrice() {
+  const sel = document.getElementById('order-product');
+  const opt = sel.options[sel.selectedIndex];
+  if (opt && opt.dataset.price !== undefined) {
+    document.getElementById('order-amount').value = opt.dataset.price;
+  }
+}
+
+function editOrder(id) {
+  const o = ordersData.find(x => x.id === id);
+  if (!o) return;
+  populateProductSelect();
+  document.getElementById('order-id').value = o.id;
+  document.getElementById('order-customer-name').value = o.customer_name || '';
+  document.getElementById('order-customer-phone').value = o.customer_phone || '';
+  document.getElementById('order-amount').value = o.amount;
+  document.getElementById('order-note').value = o.note || '';
+  document.getElementById('order-status').value = o.status;
+  document.getElementById('order-status-group').style.display = '';
+  document.getElementById('modal-order-title').textContent = 'Chỉnh sửa đơn hàng';
+  openModal('order');
+}
+
+async function saveOrder() {
+  const id   = document.getElementById('order-id').value;
+  const customer_name  = document.getElementById('order-customer-name').value.trim();
+  const customer_phone = document.getElementById('order-customer-phone').value.trim();
+  const sel = document.getElementById('order-product');
+  const product_id   = sel.value ? parseInt(sel.value) : null;
+  const product_name = sel.value ? sel.options[sel.selectedIndex].dataset.name : '';
+  const amount = parseInt(document.getElementById('order-amount').value) || 0;
+  const note   = document.getElementById('order-note').value.trim();
+  const status = document.getElementById('order-status').value;
+  if (!customer_name) return toast('Vui lòng nhập tên phật tử', 'error');
+  if (!amount) return toast('Vui lòng nhập số tiền', 'error');
+
+  if (id) {
+    await fetch('/api/orders/' + id, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ status, customer_name, customer_phone, product_name, amount, note })
+    });
+  } else {
+    await fetch('/api/orders', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ customer_name, customer_phone, product_id, product_name, amount, note })
+    });
+  }
+  closeModal('order');
+  loadOrders();
+  loadCustomers();
+  toast(id ? '✅ Đã cập nhật đơn hàng' : '✅ Đã tạo đơn hàng mới', 'success');
+}
+
+async function markPaid(id) {
+  const o = ordersData.find(x => x.id === id);
+  if (!o) return;
+  await fetch('/api/orders/' + id, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      status: 'success',
+      customer_name: o.customer_name,
+      customer_phone: o.customer_phone,
+      product_name: o.product_name,
+      amount: o.amount,
+      note: o.note
+    })
+  });
+  loadOrders();
+  toast('✅ Đã xác nhận Công Đức', 'success');
+}
+
+async function deleteOrder(id) {
+  if (!confirm('Xoá đơn hàng này?')) return;
+  await fetch('/api/orders/' + id, { method: 'DELETE' });
+  loadOrders();
+  toast('🗑️ Đã xoá đơn hàng');
+}
+
+// ─── TOAST ────────────────────────────────────────────────────
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  setTimeout(() => el.className = '', 3000);
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) {
+      const id = overlay.id.replace('modal-', '');
+      closeModal(id);
+    }
+  });
+});
+</script>
+</body>
+</html>

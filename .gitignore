@@ -1,0 +1,4 @@
+node_modules/
+brain.db
+.env
+*.log

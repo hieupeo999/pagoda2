@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Công Đức – Chùa Đại Khánh</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --crimson: #7a0c1e;
+    --crimson-dark: #500a14;
+    --gold: #c9921f;
+    --gold-light: #e8b84b;
+    --cream: #faf5ea;
+    --ink: #1a0d05;
+    --border: #e5d8c0;
+    --success: #166534;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    background: linear-gradient(135deg, #f5ede0 0%, var(--cream) 100%);
+    min-height: 100vh;
+    color: var(--ink);
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(to right, var(--crimson-dark), var(--crimson));
+    padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  }
+  .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .logo-icon { font-size: 24px; }
+  .logo-text { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 600; color: var(--gold-light); }
+  header a.back { color: rgba(255,255,255,0.75); text-decoration: none; font-size: 13px; }
+  header a.back:hover { color: #fff; }
+
+  /* ── Layout ── */
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 20px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+
+  /* ── Card ── */
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+  }
+  .card-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px; font-weight: 600;
+    color: var(--crimson-dark);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--gold);
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* ── Form ── */
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block;
+    font-size: 13px; font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .form-group label .req { color: var(--crimson); }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: var(--crimson);
+    box-shadow: 0 0 0 3px rgba(122,12,30,0.08);
+  }
+  .amount-display {
+    font-size: 24px; font-weight: 700;
+    color: var(--crimson);
+    margin-top: 6px;
+  }
+
+  .btn-submit {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--crimson), var(--crimson-dark));
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+    letter-spacing: 0.02em;
+  }
+  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(122,12,30,0.3); }
+  .btn-submit:disabled { background: #ccc; transform: none; box-shadow: none; cursor: not-allowed; }
+
+  /* ── QR Section ── */
+  #qr-section { display: none; }
+
+  .order-info {
+    background: #fdf9f0;
+    border: 1px dashed var(--gold);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    font-size: 14px;
+    line-height: 1.8;
+  }
+  .order-info .code {
+    font-family: monospace;
+    font-size: 20px; font-weight: 700;
+    color: var(--crimson);
+    letter-spacing: 0.1em;
+    display: block;
+    margin-top: 4px;
+  }
+  .order-info .amount {
+    font-size: 22px; font-weight: 700;
+    color: var(--crimson);
+    display: block;
+  }
+
+  .qr-wrap {
+    text-align: center;
+    padding: 16px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .qr-wrap img { max-width: 220px; width: 100%; border-radius: 8px; }
+  .qr-note { font-size: 13px; color: #666; margin-top: 8px; line-height: 1.5; }
+
+  /* Nội dung chuyển khoản */
+  .transfer-content {
+    background: #fff3cd;
+    border: 1px solid var(--gold);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin: 12px 0;
+    font-size: 14px;
+  }
+  .transfer-content strong { color: var(--crimson); font-size: 16px; }
+  .copy-btn {
+    background: var(--gold);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-left: 8px;
+  }
+  .copy-btn:hover { background: #a87a18; }
+
+  /* ── Status ── */
+  .status-bar {
+    display: flex; align-items: center; gap: 10px;
+    background: #fef9c3;
+    border: 1px solid #fbbf24;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 14px;
+    margin-top: 16px;
+  }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid #fbbf24;
+    border-top-color: #92400e;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Success State ── */
+  #success-section { display: none; }
+  .success-card {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .success-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    animation: pop 0.5s ease;
+  }
+  @keyframes pop {
+    0% { transform: scale(0); }
+    80% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+  .success-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px; font-weight: 600;
+    color: var(--success);
+    margin-bottom: 8px;
+  }
+  .success-msg { color: #555; line-height: 1.7; font-size: 15px; }
+  .success-detail {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin: 20px 0;
+    text-align: left;
+    font-size: 14px;
+    line-height: 1.9;
+  }
+  .btn-new {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 12px 28px;
+    background: var(--crimson);
+    color: #fff;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .btn-new:hover { background: var(--crimson-dark); transform: translateY(-1px); }
+
+  /* ── Payment method selector ── */
+  .method-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .method-btn {
+    padding: 12px 10px; border-radius: 10px; cursor: pointer; text-align: center;
+    border: 2px solid var(--border); background: #fdfaf3; font-size: 13px;
+    font-weight: 600; transition: all 0.2s; font-family: inherit; color: var(--ink);
+  }
+  .method-btn:hover { border-color: var(--gold); background: #fef9ee; }
+  .method-btn.active { border-color: var(--crimson); background: #fff0f2; color: var(--crimson); }
+  .method-btn .method-icon { font-size: 22px; display: block; margin-bottom: 4px; }
+  .method-btn .method-label { display: block; font-size: 11px; font-weight: 400; color: #888; margin-top: 2px; }
+
+  /* ── Config warning ── */
+  .config-warning {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+  .config-warning strong { color: #856404; }
+
+  /* ── Sidebar info ── */
+  .info-block {
+    background: #fdf9f0;
+    border-left: 3px solid var(--gold);
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    line-height: 1.8;
+    color: #555;
+    margin-bottom: 16px;
+  }
+  .info-block strong { color: var(--ink); }
+
+  .steps { list-style: none; counter-reset: step; }
+  .steps li {
+    counter-increment: step;
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-bottom: 12px;
+    font-size: 13px; color: #555; line-height: 1.5;
+  }
+  .steps li::before {
+    content: counter(step);
+    min-width: 24px; height: 24px;
+    background: var(--crimson);
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* ── Multi-member form ── */
+  .member-block {
+    background: #fdf9f0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .member-header {
+    font-size: 13px; font-weight: 700;
+    color: var(--crimson-dark);
+    margin-bottom: 10px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .btn-remove-member {
+    background: none; border: 1px solid #ddd; border-radius: 6px;
+    color: #999; font-size: 12px; cursor: pointer; padding: 2px 8px;
+  }
+  .btn-remove-member:hover { background: #fee2e2; color: var(--danger); border-color: var(--danger); }
+  .member-row { display: grid; grid-template-columns: 1fr 80px; gap: 8px; margin-bottom: 8px; }
+  .member-addr { margin-bottom: 0; }
+  .member-row input, .member-addr input {
+    width: 100%; padding: 8px 12px; border: 1.5px solid var(--border);
+    border-radius: 8px; font-size: 13px; font-family: inherit;
+  }
+  .member-row input:focus, .member-addr input:focus {
+    outline: none; border-color: var(--crimson);
+  }
+  .member-label { font-size: 11px; color: var(--gray); margin-bottom: 3px; font-weight: 600; }
+  .btn-add-member {
+    width: 100%; padding: 9px; border: 2px dashed var(--gold);
+    background: transparent; color: var(--gold); border-radius: 10px;
+    font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 16px;
+    transition: all 0.2s;
+  }
+  .btn-add-member:hover { background: #fef9f0; }
+  @media (max-width: 400px) { .member-row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">
+    <span class="logo-icon">🏛️</span>
+    <span class="logo-text">Chùa Đại Khánh</span>
+  </a>
+  <a href="/" class="back">← Về trang chủ</a>
+</header>
+
+<div class="container">
+  <div class="grid">
+
+    <!-- ── LEFT: Form ── -->
+    <div>
+      <!-- Checkout Form -->
+      <div class="card" id="form-section">
+        <div class="card-title">🙏 Thông tin Công Đức</div>
+
+        <div class="form-group">
+          <label>Chọn phương thức Công Đức <span class="req">*</span></label>
+          <div class="method-selector">
+            <button type="button" class="method-btn active" id="method-sepay" onclick="selectMethod('sepay')">
+              <span class="method-icon">🏦</span>
+              Qua Sepay
+              <span class="method-label">VietinBank – tự động xác nhận</span>
+            </button>
+            <button type="button" class="method-btn" id="method-agribank" onclick="selectMethod('agribank')">
+              <span class="method-icon">🙏</span>
+              Agribank – Sư Trụ Trì
+              <span class="method-label">Nguyễn Thị Bắc – trực tiếp</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="sepay-warning" class="config-warning" style="display:none">
+          <strong>⚠️ Chưa cấu hình Sepay</strong><br>
+          Mở <code>server.js</code>, điền <code>ACCOUNT_NUMBER</code> VietinBank từ Sepay Dashboard.
+        </div>
+
+        <div class="form-group">
+          <label>Số điện thoại / Zalo liên hệ <span class="req">*</span></label>
+          <input type="tel" id="f-phone" placeholder="0912 345 678" autocomplete="tel">
+        </div>
+
+        <div class="form-group">
+          <label>Họ và tên Phật Tử và gia đình <span class="req">*</span><br>
+            <span style="font-weight:400;font-size:12px;color:#888">Điền đầy đủ tên, tuổi, địa chỉ từng người để sư thầy đọc sớ đúng</span>
+          </label>
+          <div id="members-container"></div>
+          <button type="button" class="btn-add-member" onclick="addMember()">+ Thêm thành viên</button>
+        </div>
+
+        <div class="form-group">
+          <label>Chọn dịch vụ <span class="req">*</span></label>
+          <select id="f-product" onchange="onProductChange()">
+            <option value="">-- Đang tải... --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Số tiền công đức (VNĐ) <span class="req">*</span></label>
+          <input type="number" id="f-amount" placeholder="Nhập số tiền" min="0" oninput="updateAmountDisplay()">
+          <div class="amount-display" id="amount-display"></div>
+        </div>
+
+        <button class="btn-submit" onclick="submitOrder()" id="btn-submit">
+          🙏 Tiếp tục Công Đức →
+        </button>
+      </div>
+
+      <!-- QR Section -->
+      <div class="card" id="qr-section">
+        <div class="card-title">📱 Quét QR Công Đức</div>
+
+        <div class="order-info">
+          <span style="font-size:13px;color:#666">Mã đơn:</span>
+          <span class="code" id="display-code">DK12345678</span>
+          <span style="font-size:13px;color:#888;display:block;margin-top:4px" id="display-method"></span>
+          <span style="font-size:13px;color:#666;display:block;margin-top:6px">Số tiền công đức:</span>
+          <span class="amount" id="display-amount">—</span>
+        </div>
+
+        <div class="qr-wrap">
+          <img id="qr-img" src="" alt="QR Công Đức">
+          <p class="qr-note">Quét bằng app ngân hàng bất kỳ hoặc VNPAY, MoMo</p>
+        </div>
+
+        <div class="transfer-content">
+          📝 <strong>Nội dung chuyển khoản:</strong><br>
+          <strong id="display-content">DK12345678</strong>
+          <button class="copy-btn" onclick="copyContent()">📋 Copy</button>
+          <div style="font-size:12px;color:#856404;margin-top:6px">
+            ⚠️ Điền đúng nội dung này để hệ thống tự xác nhận
+          </div>
+        </div>
+
+        <div class="status-bar" id="status-bar">
+          <div class="spinner"></div>
+          <span>Đang chờ xác nhận Công Đức...</span>
+        </div>
+
+        <div id="manual-note" style="display:none;margin-top:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;font-size:13px;color:#166534;line-height:1.7">
+          🙏 <strong>Agribank – Sư Trụ Trì:</strong><br>
+          Sau khi chuyển khoản, nhà chùa sẽ xác nhận và liên hệ lại qua số điện thoại của quý phật tử trong vòng 24 giờ.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT: Success or Info ── -->
+    <div>
+      <!-- Success -->
+      <div class="card" id="success-section">
+        <div class="success-card">
+          <div class="success-icon">🙏</div>
+          <div class="success-title">Nam Mô A Di Đà Phật</div>
+          <p class="success-msg">Cảm ơn tấm lòng thành kính của quý phật tử.<br>Công đức đã được xác nhận thành công.</p>
+          <div class="success-detail" id="success-detail"></div>
+          <a href="/thanh-toan" class="btn-new">🙏 Công Đức thêm</a>
+        </div>
+      </div>
+
+      <!-- How-to info (shown before submit) -->
+      <div id="howto-section">
+        <div class="card">
+          <div class="card-title" style="font-size:18px">📖 Hướng dẫn Công Đức</div>
+          <ol class="steps">
+            <li>Điền số điện thoại, họ tên đầy đủ của từng thành viên trong gia đình (tên, tuổi, địa chỉ).</li>
+            <li>Chọn dịch vụ và nhập số tiền công đức tùy tâm.</li>
+            <li>Nhấn <strong>"Tiếp tục Công Đức"</strong> — hệ thống tạo đơn ngay lập tức.</li>
+            <li>Mở app ngân hàng, quét QR hoặc chuyển khoản với đúng nội dung.</li>
+            <li>Hệ thống tự động xác nhận trong vài giây sau khi nhận tiền.</li>
+          </ol>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <div class="card-title" style="font-size:18px">🏛️ Chùa Đại Khánh</div>
+          <div class="info-block">
+            <strong>Địa chỉ:</strong> Thôn Trừng Xá, xã Trung Chính, Bắc Ninh<br>
+            <strong>Liên hệ:</strong> 0974 556 898 (Zalo / gọi)<br>
+            <strong>Giờ mở cửa:</strong> 06:00 – 18:00 hàng ngày
+          </div>
+          <div class="info-block">
+            Mọi khoản công đức được dùng vào việc tu bổ, phục dựng ngôi chùa và các hoạt động tâm linh của làng Trừng Xá.
+            Quý phật tử công đức từ 500.000đ sẽ được ghi tên vào <strong>bia công đức</strong>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────
+let bankConfig = {};
+let currentOrderCode = '';
+let pollInterval = null;
+let products = [];
+let memberCount = 0;
+let selectedMethod = 'sepay'; // 'sepay' | 'agribank'
+
+// ─── INIT ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  addMember();
+  await loadConfig();
+  await loadProducts();
+});
+
+// ─── PAYMENT METHOD ───────────────────────────────────────────
+function selectMethod(method) {
+  selectedMethod = method;
+  document.getElementById('method-sepay').classList.toggle('active', method === 'sepay');
+  document.getElementById('method-agribank').classList.toggle('active', method === 'agribank');
+  // Hiện/ẩn cảnh báo Sepay
+  if (method === 'sepay' && bankConfig.sepay && !bankConfig.sepay.configured) {
+    document.getElementById('sepay-warning').style.display = '';
+  } else {
+    document.getElementById('sepay-warning').style.display = 'none';
+  }
+}
+
+// ─── MULTI-MEMBER FORM ────────────────────────────────────────
+function addMember() {
+  memberCount++;
+  const id = memberCount;
+  const div = document.createElement('div');
+  div.className = 'member-block';
+  div.id = 'member-' + id;
+  div.innerHTML = `
+    <div class="member-header">
+      <span>Người ${id}</span>
+      ${id > 1 ? `<button type="button" class="btn-remove-member" onclick="removeMember(${id})">✕ Xóa</button>` : ''}
+    </div>
+    <div class="member-row">
+      <div>
+        <div class="member-label">Họ và tên *</div>
+        <input type="text" id="m-name-${id}" placeholder="VD: Nguyễn Văn A">
+      </div>
+      <div>
+        <div class="member-label">Tuổi</div>
+        <input type="number" id="m-age-${id}" placeholder="45" min="1" max="120">
+      </div>
+    </div>
+    <div class="member-addr">
+      <div class="member-label">Địa chỉ</div>
+      <input type="text" id="m-addr-${id}" placeholder="VD: Thôn Trừng Xá, Bắc Ninh">
+    </div>
+  `;
+  document.getElementById('members-container').appendChild(div);
+}
+
+function removeMember(id) {
+  const el = document.getElementById('member-' + id);
+  if (el) el.remove();
+}
+
+function collectMembers() {
+  const blocks = document.querySelectorAll('.member-block');
+  const members = [];
+  blocks.forEach(b => {
+    const idStr = b.id.replace('member-', '');
+    const name = (document.getElementById('m-name-' + idStr)?.value || '').trim();
+    const age  = (document.getElementById('m-age-'  + idStr)?.value || '').trim();
+    const addr = (document.getElementById('m-addr-' + idStr)?.value || '').trim();
+    if (name) members.push({ name, age, addr });
+  });
+  return members;
+}
+
+async function loadConfig() {
+  try {
+    bankConfig = await fetch('/api/config').then(r => r.json());
+    // Kiểm tra Sepay có cấu hình chưa
+    if (bankConfig.sepay && !bankConfig.sepay.configured) {
+      document.getElementById('sepay-warning').style.display = '';
+    }
+  } catch(e) { console.warn('Config load failed', e); }
+}
+
+async function loadProducts() {
+  try {
+    products = await fetch('/api/products').then(r => r.json());
+    const sel = document.getElementById('f-product');
+    sel.innerHTML = '<option value="">-- Chọn dịch vụ --</option>';
+    products.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.dataset.price = p.price;
+      opt.dataset.name = p.name;
+      opt.textContent = p.name + (p.price > 0 ? ' – ' + fmt(p.price) : ' – Tùy tâm phật tử');
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    document.getElementById('f-product').innerHTML = '<option value="">⚠️ Không thể tải dịch vụ – server chưa chạy?</option>';
+  }
+}
+
+function onProductChange() {
+  const sel = document.getElementById('f-product');
+  const opt = sel.options[sel.selectedIndex];
+  if (opt && opt.dataset.price !== undefined) {
+    document.getElementById('f-amount').value = opt.dataset.price || '';
+    updateAmountDisplay();
+  }
+}
+
+function updateAmountDisplay() {
+  const v = parseInt(document.getElementById('f-amount').value) || 0;
+  document.getElementById('amount-display').textContent = v > 0 ? fmt(v) : '';
+}
+
+function fmt(n) { return Number(n).toLocaleString('vi-VN') + 'đ'; }
+
+// ─── SUBMIT ───────────────────────────────────────────────────
+async function submitOrder() {
+  const phone  = document.getElementById('f-phone').value.trim();
+  const amount = parseInt(document.getElementById('f-amount').value) || 0;
+  const sel    = document.getElementById('f-product');
+  const product_id   = sel.value ? parseInt(sel.value) : null;
+  const product_name = sel.value ? sel.options[sel.selectedIndex].dataset.name : '';
+  const members = collectMembers();
+
+  if (!phone)           return alert('Vui lòng nhập số điện thoại');
+  if (members.length === 0) return alert('Vui lòng điền ít nhất 1 họ tên phật tử');
+  if (!members[0].name) return alert('Vui lòng điền họ tên người đầu tiên');
+  if (amount < 1000)    return alert('Vui lòng nhập số tiền công đức');
+
+  // Tạo chuỗi note từ danh sách thành viên
+  const familyText = members.map((m, i) =>
+    `${i+1}. ${m.name}${m.age ? ' (' + m.age + ' tuổi)' : ''}${m.addr ? ' – ' + m.addr : ''}`
+  ).join(' | ');
+
+  const customer_name = members[0].name;
+
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.textContent = 'Đang tạo đơn...';
+
+  try {
+    const res = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_name, customer_phone: phone, product_id, product_name, amount, note: familyText })
+    });
+    const data = await res.json();
+    if (!data.order_code) throw new Error('Tạo đơn thất bại');
+
+    currentOrderCode = data.order_code;
+    showQR(data.order_code, amount, customer_name, product_name, members);
+  } catch(e) {
+    alert('Lỗi: ' + e.message + '\n\nServer có đang chạy không? Chạy: node server.js');
+    btn.disabled = false;
+    btn.textContent = '🙏 Tiếp tục Công Đức →';
+  }
+}
+
+// ─── SHOW QR ──────────────────────────────────────────────────
+function showQR(orderCode, amount, name, productName, members) {
+  document.getElementById('form-section').style.display = 'none';
+  document.getElementById('howto-section').style.display = 'none';
+  document.getElementById('qr-section').style.display = '';
+
+  document.getElementById('display-code').textContent = orderCode;
+  document.getElementById('display-amount').textContent = fmt(amount);
+  document.getElementById('display-content').textContent = orderCode;
+
+  // Chọn thông tin ngân hàng theo phương thức
+  let bankId, acctNum, acctName, methodLabel;
+  if (selectedMethod === 'agribank') {
+    const ag = bankConfig.agribank || {};
+    bankId    = ag.bankId        || 'agribank';
+    acctNum   = ag.accountNumber || '2608205306753';
+    acctName  = ag.accountName   || 'NGUYEN THI BAC';
+    methodLabel = '🙏 Agribank – Sư Trụ Trì (Nguyễn Thị Bắc)';
+  } else {
+    const sp = bankConfig.sepay || {};
+    bankId    = sp.bankId        || 'vietinbank';
+    acctNum   = sp.accountNumber || '0000000000';
+    acctName  = sp.accountName   || 'CHUA DAI KHANH';
+    methodLabel = '🏦 Sepay – VietinBank (tự động xác nhận)';
+  }
+
+  // Hiển thị nhãn phương thức
+  const methodEl = document.getElementById('display-method');
+  if (methodEl) methodEl.textContent = methodLabel;
+
+  const qrUrl = `https://img.vietqr.io/image/${bankId}-${acctNum}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(orderCode)}&accountName=${encodeURIComponent(acctName)}`;
+  document.getElementById('qr-img').src = qrUrl;
+
+  // Agribank: không có webhook → hiện ghi chú thủ công
+  const manualNote = document.getElementById('manual-note');
+  if (manualNote) manualNote.style.display = selectedMethod === 'agribank' ? '' : 'none';
+
+  // Chỉ poll nếu dùng Sepay (có webhook)
+  if (selectedMethod === 'sepay') {
+    startPolling(orderCode);
+  }
+}
+
+// ─── POLLING ──────────────────────────────────────────────────
+function startPolling(orderCode) {
+  clearInterval(pollInterval);
+  pollInterval = setInterval(async () => {
+    try {
+      const order = await fetch('/api/orders/code/' + orderCode).then(r => r.json());
+      if (order.status === 'success') {
+        clearInterval(pollInterval);
+        showSuccess(order);
+      }
+    } catch(e) { /* ignore */ }
+  }, 3000);
+}
+
+// ─── SUCCESS ──────────────────────────────────────────────────
+function showSuccess(order) {
+  document.getElementById('qr-section').style.display = 'none';
+  document.getElementById('success-section').style.display = '';
+
+  const paidAt = order.paid_at ? new Date(order.paid_at).toLocaleString('vi-VN') : new Date().toLocaleString('vi-VN');
+  const familyLines = (order.note || '').split(' | ').filter(Boolean)
+    .map(l => `<div>🙏 ${l}</div>`).join('');
+
+  document.getElementById('success-detail').innerHTML = `
+    <div>🧾 <strong>Mã đơn:</strong> ${order.order_code}</div>
+    <div>📿 <strong>Dịch vụ:</strong> ${order.product_name || '—'}</div>
+    <div>💰 <strong>Công đức:</strong> ${fmt(order.amount)}</div>
+    <div>✅ <strong>Xác nhận lúc:</strong> ${paidAt}</div>
+    ${familyLines ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #bbf7d0"><strong>🙏 Danh sách gia đình:</strong>${familyLines}</div>` : ''}
+  `;
+}
+
+// ─── COPY ─────────────────────────────────────────────────────
+function copyContent() {
+  const text = document.getElementById('display-content').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✅ Đã copy!';
+    setTimeout(() => btn.textContent = '📋 Copy', 2000);
+  });
+}
+</script>
+</body>
+</html>
