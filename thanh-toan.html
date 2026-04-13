@@ -381,7 +381,7 @@
         </div>
 
         <div class="form-group">
-          <label>Chọn dịch vụ <span class="req">*</span></label>
+          <label>Chọn nghi lễ <span class="req">*</span></label>
           <select id="f-product" onchange="onProductChange()">
             <option value="">-- Đang tải... --</option>
           </select>
@@ -454,7 +454,7 @@
           <div class="card-title" style="font-size:18px">📖 Hướng dẫn Công Đức</div>
           <ol class="steps">
             <li>Điền số điện thoại, họ tên đầy đủ của từng thành viên trong gia đình (tên, tuổi, địa chỉ).</li>
-            <li>Chọn dịch vụ và nhập số tiền công đức tùy tâm.</li>
+            <li>Chọn nghi lễ và nhập số tiền công đức tùy tâm.</li>
             <li>Nhấn <strong>"Tiếp tục Công Đức"</strong> — hệ thống tạo đơn ngay lập tức.</li>
             <li>Mở app ngân hàng, quét QR hoặc chuyển khoản với đúng nội dung.</li>
             <li>Hệ thống tự động xác nhận trong vài giây sau khi nhận tiền.</li>
@@ -570,7 +570,7 @@ async function loadProducts() {
   try {
     products = await fetch('/api/products').then(r => r.json());
     const sel = document.getElementById('f-product');
-    sel.innerHTML = '<option value="">-- Chọn dịch vụ --</option>';
+    sel.innerHTML = '<option value="">-- Chọn nghi lễ --</option>';
     products.forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.id;
@@ -580,7 +580,7 @@ async function loadProducts() {
       sel.appendChild(opt);
     });
   } catch(e) {
-    document.getElementById('f-product').innerHTML = '<option value="">⚠️ Không thể tải dịch vụ – server chưa chạy?</option>';
+    document.getElementById('f-product').innerHTML = '<option value="">⚠️ Không thể tải nghi lễ – server chưa chạy?</option>';
   }
 }
 
@@ -711,7 +711,7 @@ function showSuccess(order) {
 
   document.getElementById('success-detail').innerHTML = `
     <div>🧾 <strong>Mã đơn:</strong> ${order.order_code}</div>
-    <div>📿 <strong>Dịch vụ:</strong> ${order.product_name || '—'}</div>
+    <div>📿 <strong>Nghi lễ:</strong> ${order.product_name || '—'}</div>
     <div>💰 <strong>Công đức:</strong> ${fmt(order.amount)}</div>
     <div>✅ <strong>Xác nhận lúc:</strong> ${paidAt}</div>
     ${familyLines ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #bbf7d0"><strong>🙏 Danh sách gia đình:</strong>${familyLines}</div>` : ''}

@@ -200,13 +200,13 @@
   <h1><span>🏛️</span> Chùa Đại Khánh – Admin Panel</h1>
   <div>
     <a href="/" class="header-link">← Website</a>
-    <a href="/thanh-toan" class="header-link">💳 Trang thanh toán</a>
+    <a href="/thanh-toan" class="header-link">🪷 Trang công đức</a>
   </div>
 </header>
 
 <div class="tabs">
   <div class="tab active" onclick="switchTab('products')" id="tab-products">
-    🙏 Dịch vụ <span id="cnt-products" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
+    🙏 Nghi lễ <span id="cnt-products" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
   </div>
   <div class="tab" onclick="switchTab('customers')" id="tab-customers">
     👥 Phật tử <span id="cnt-customers" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
@@ -223,14 +223,14 @@
     <div class="stats" id="stats-products"></div>
     <div class="toolbar">
       <div class="toolbar-left">
-        <input class="search-input" type="text" placeholder="🔍 Tìm dịch vụ..." oninput="filterTable('products-table', this.value)">
+        <input class="search-input" type="text" placeholder="🔍 Tìm nghi lễ..." oninput="filterTable('products-table', this.value)">
       </div>
-      <button class="btn btn-primary" onclick="openModal('product')">+ Thêm dịch vụ</button>
+      <button class="btn btn-primary" onclick="openModal('product')">+ Thêm nghi lễ</button>
     </div>
     <div class="table-wrap">
       <table id="products-table">
         <thead><tr>
-          <th>ID</th><th>Tên dịch vụ</th><th>Công đức</th><th>Mô tả</th><th>Ngày tạo</th><th>Thao tác</th>
+          <th>ID</th><th>Tên nghi lễ</th><th>Công đức</th><th>Mô tả</th><th>Ngày tạo</th><th>Thao tác</th>
         </tr></thead>
         <tbody id="products-body"></tbody>
       </table>
@@ -273,7 +273,7 @@
     <div class="table-wrap">
       <table id="orders-table">
         <thead><tr>
-          <th>Mã đơn</th><th>Phật tử</th><th>SĐT</th><th>Dịch vụ</th><th>Công đức</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th>
+          <th>Mã đơn</th><th>Phật tử</th><th>SĐT</th><th>Nghi lễ</th><th>Công đức</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th>
         </tr></thead>
         <tbody id="orders-body"></tbody>
       </table>
@@ -285,10 +285,10 @@
 <!-- ── MODAL PRODUCT ── -->
 <div class="modal-overlay" id="modal-product">
   <div class="modal">
-    <h2>🙏 <span id="modal-product-title">Thêm dịch vụ</span></h2>
+    <h2>🙏 <span id="modal-product-title">Thêm nghi lễ</span></h2>
     <input type="hidden" id="product-id">
     <div class="form-group">
-      <label>Tên dịch vụ *</label>
+      <label>Tên nghi lễ *</label>
       <input type="text" id="product-name" placeholder="VD: Dâng sớ cầu an">
     </div>
     <div class="form-group">
@@ -297,7 +297,7 @@
     </div>
     <div class="form-group">
       <label>Mô tả</label>
-      <textarea id="product-description" placeholder="Mô tả ngắn về dịch vụ..."></textarea>
+      <textarea id="product-description" placeholder="Mô tả ngắn về nghi lễ..."></textarea>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('product')">Huỷ</button>
@@ -352,9 +352,9 @@
       </div>
     </div>
     <div class="form-group">
-      <label>Dịch vụ</label>
+      <label>Nghi lễ</label>
       <select id="order-product" onchange="autoFillPrice()">
-        <option value="">-- Chọn dịch vụ --</option>
+        <option value="">-- Chọn nghi lễ --</option>
       </select>
     </div>
     <div class="form-row">
@@ -444,13 +444,13 @@ async function loadProducts() {
   document.getElementById('cnt-products').textContent = data.length;
 
   document.getElementById('stats-products').innerHTML = `
-    <div class="stat-card"><div class="label">Tổng dịch vụ</div><div class="value">${data.length}</div></div>
+    <div class="stat-card"><div class="label">Tổng nghi lễ</div><div class="value">${data.length}</div></div>
     <div class="stat-card"><div class="label">Tùy tâm phật tử</div><div class="value">${data.filter(p => p.price === 0).length}</div></div>
   `;
 
   const tbody = document.getElementById('products-body');
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="icon">🙏</div>Chưa có dịch vụ nào</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="icon">🙏</div>Chưa có nghi lễ nào</div></td></tr>';
     return;
   }
   tbody.innerHTML = data.map(p => `
@@ -481,7 +481,7 @@ function clearForm(type) {
   if (type === 'product') {
     ['product-id','product-name','product-price','product-quantity','product-description']
       .forEach(id => document.getElementById(id).value = '');
-    document.getElementById('modal-product-title').textContent = 'Thêm dịch vụ';
+    document.getElementById('modal-product-title').textContent = 'Thêm nghi lễ';
   }
   if (type === 'customer') {
     ['customer-id','customer-name','customer-phone','customer-zalo','customer-email']
@@ -506,7 +506,7 @@ function editProduct(id) {
   document.getElementById('product-price').value = p.price;
   document.getElementById('product-quantity').value = p.quantity;
   document.getElementById('product-description').value = p.description || '';
-  document.getElementById('modal-product-title').textContent = 'Chỉnh sửa dịch vụ';
+  document.getElementById('modal-product-title').textContent = 'Chỉnh sửa nghi lễ';
   openModal('product');
 }
 
@@ -515,21 +515,21 @@ async function saveProduct() {
   const name = document.getElementById('product-name').value.trim();
   const price = parseInt(document.getElementById('product-price').value) || 0;
   const description = document.getElementById('product-description').value.trim();
-  if (!name) return toast('Vui lòng nhập tên dịch vụ', 'error');
+  if (!name) return toast('Vui lòng nhập tên nghi lễ', 'error');
 
   const url = id ? '/api/products/' + id : '/api/products';
   const method = id ? 'PUT' : 'POST';
   await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, price, description, quantity: -1}) });
   closeModal('product');
   loadProducts();
-  toast(id ? '✅ Đã cập nhật dịch vụ' : '✅ Đã thêm dịch vụ mới', 'success');
+  toast(id ? '✅ Đã cập nhật nghi lễ' : '✅ Đã thêm nghi lễ mới', 'success');
 }
 
 async function deleteProduct(id) {
-  if (!confirm('Xoá dịch vụ này?')) return;
+  if (!confirm('Xoá nghi lễ này?')) return;
   await fetch('/api/products/' + id, { method: 'DELETE' });
   loadProducts();
-  toast('🗑️ Đã xoá dịch vụ');
+  toast('🗑️ Đã xoá nghi lễ');
 }
 
 // ─── PHẬT TỬ ──────────────────────────────────────────────────
@@ -645,7 +645,7 @@ async function loadOrders() {
 
 function populateProductSelect() {
   const sel = document.getElementById('order-product');
-  sel.innerHTML = '<option value="">-- Chọn dịch vụ --</option>';
+  sel.innerHTML = '<option value="">-- Chọn nghi lễ --</option>';
   productsData.forEach(p => {
     const opt = document.createElement('option');
     opt.value = p.id;
