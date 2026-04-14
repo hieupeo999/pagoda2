@@ -14,7 +14,7 @@ const GMAIL_PASS        = process.env.GMAIL_PASS || '';
 
 // ─── RESEND CONFIG (email tự động cho khách hàng) ─────────────
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-const RESEND_FROM    = 'Chùa Đại Khánh <onboarding@resend.dev>';
+const RESEND_FROM    = 'Chùa Đại Khánh <chua@chuadaikhanh-trungchinh-bn.com.vn>';
 const SITE_URL       = process.env.SITE_URL || 'https://chuadaikhanh-trungchinh-bn.com.vn';
 
 // ─── COOKIE HELPERS ───────────────────────────────────────────
