@@ -345,18 +345,19 @@
   <div class="panel" id="panel-customers">
     <div class="info-box">
       <span class="icon">👥</span>
-      <div>Danh sách phật tử <strong>đăng ký qua website</strong> (trang công đức). Để quản lý lịch lễ thủ công → dùng tab <strong>📅 Lịch Lễ</strong>.</div>
+      <div>Danh sách phật tử <strong>đăng ký qua website</strong>. Cần điền đầy đủ <strong>địa chỉ</strong> để in sớ. Để quản lý lịch lễ → dùng tab <strong>📅 Lịch Lễ</strong>.</div>
     </div>
     <div class="stats" id="stats-customers"></div>
     <div class="toolbar">
       <div class="toolbar-left">
-        <input class="search-input" type="text" placeholder="🔍 Tìm tên, SĐT, email..." oninput="filterTable('customers-table', this.value)">
+        <input class="search-input" type="text" placeholder="🔍 Tìm tên, SĐT, địa chỉ..." oninput="filterTable('customers-table', this.value)">
       </div>
+      <button class="btn btn-primary" onclick="openModal('customer')">➕ Thêm phật tử</button>
     </div>
     <div class="table-wrap">
       <table id="customers-table">
         <thead><tr>
-          <th>STT</th><th>Họ tên</th><th>Điện thoại</th><th>Zalo</th><th>Email</th><th>Ngày đăng ký</th><th>Thao tác</th>
+          <th>#</th><th>Họ tên</th><th>Điện thoại</th><th>Địa chỉ</th><th>Email</th><th>Ngày ĐK</th><th>Thao tác</th>
         </tr></thead>
         <tbody id="customers-body"></tbody>
       </table>
@@ -423,29 +424,41 @@
 <!-- ── MODAL CUSTOMER ── -->
 <div class="modal-overlay" id="modal-customer">
   <div class="modal">
-    <h2>🙏 <span id="modal-customer-title">Thêm phật tử</span></h2>
+    <h2>👥 <span id="modal-customer-title">Thêm phật tử</span></h2>
     <input type="hidden" id="customer-id">
+
     <div class="form-group">
-      <label>Họ tên *</label>
-      <input type="text" id="customer-name" placeholder="Nguyễn Văn A">
+      <label>Họ và tên *</label>
+      <input type="text" id="customer-name" placeholder="VD: Nguyễn Văn A">
+      <div class="hint">Ghi đầy đủ họ tên để in sớ đúng</div>
     </div>
+
     <div class="form-row">
       <div class="form-group">
         <label>Số điện thoại</label>
-        <input type="tel" id="customer-phone" placeholder="0912345678">
+        <input type="tel" id="customer-phone" placeholder="0912 345 678">
       </div>
       <div class="form-group">
         <label>Zalo</label>
-        <input type="text" id="customer-zalo" placeholder="0912345678">
+        <input type="text" id="customer-zalo" placeholder="0912 345 678">
       </div>
     </div>
+
+    <div class="form-group">
+      <label>Địa chỉ *</label>
+      <input type="text" id="customer-address" placeholder="VD: Thôn Trừng Xá, xã Trung Chính, Bắc Ninh">
+      <div class="hint">⚠️ Bắt buộc điền để in sớ – nếu không có địa chỉ không thể làm lễ</div>
+    </div>
+
     <div class="form-group">
       <label>Email</label>
       <input type="email" id="customer-email" placeholder="email@gmail.com">
+      <div class="hint">Hệ thống tự gửi email chăm sóc nếu có địa chỉ email</div>
     </div>
+
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('customer')">Huỷ</button>
-      <button class="btn btn-primary" onclick="saveCustomer()">💾 Lưu</button>
+      <button class="btn btn-ghost" onclick="closeModal('customer')">✕ Huỷ</button>
+      <button class="btn btn-primary" onclick="saveCustomer()">💾 Lưu phật tử</button>
     </div>
   </div>
 </div>
@@ -839,7 +852,7 @@ function clearForm(type) {
     document.getElementById('modal-product-title').textContent = 'Thêm nghi lễ';
   }
   if (type === 'customer') {
-    ['customer-id','customer-name','customer-phone','customer-zalo','customer-email']
+    ['customer-id','customer-name','customer-phone','customer-zalo','customer-email','customer-address']
       .forEach(id => document.getElementById(id).value = '');
     document.getElementById('modal-customer-title').textContent = 'Thêm phật tử';
   }
@@ -888,71 +901,161 @@ async function deleteProduct(id) {
 }
 
 // ─── PHẬT TỬ ──────────────────────────────────────────────────
+// ─── CUSTOMERS CRUD ──────────────────────────────────────────
 async function loadCustomers() {
-  const data = await fetch('/api/customers').then(r => r.json());
+  let data;
+  try {
+    const res = await fetch('/api/customers');
+    if (!res.ok) throw new Error('Lỗi ' + res.status);
+    data = await res.json();
+  } catch(e) {
+    toast('❌ Không tải được danh sách phật tử: ' + e.message, 'error');
+    return;
+  }
+
   customersData = data;
   document.getElementById('cnt-customers').textContent = data.length;
 
+  // Stats
+  const hasAddress = data.filter(c => c.address && c.address.trim()).length;
+  const noAddress  = data.length - hasAddress;
   document.getElementById('stats-customers').innerHTML = `
-    <div class="stat-card"><div class="label">Tổng phật tử</div><div class="value">${data.length}</div></div>
-    <div class="stat-card"><div class="label">Có số điện thoại</div><div class="value">${data.filter(c => c.phone).length}</div></div>
-    <div class="stat-card"><div class="label">Có Zalo</div><div class="value">${data.filter(c => c.zalo).length}</div></div>
+    <div class="stat-card">
+      <div class="label">Tổng phật tử</div>
+      <div class="value">${data.length}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">✅ Có địa chỉ</div>
+      <div class="value" style="color:#166534">${hasAddress}</div>
+      <div class="sub">Có thể in sớ</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">⚠️ Thiếu địa chỉ</div>
+      <div class="value" style="color:#854d0e">${noAddress}</div>
+      <div class="sub">Cần bổ sung</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Có SĐT</div>
+      <div class="value">${data.filter(c => c.phone).length}</div>
+    </div>
   `;
 
   const tbody = document.getElementById('customers-body');
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="icon">🙏</div>Chưa có phật tử nào</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="icon">🙏</div><p>Chưa có phật tử nào. Bấm "+ Thêm phật tử" để bắt đầu.</p></div></td></tr>';
     return;
   }
-  tbody.innerHTML = data.map(c => `
-    <tr>
-      <td><span style="color:var(--gray);font-size:12px">#${c.id}</span></td>
-      <td><strong>${c.name}</strong></td>
-      <td>${c.phone || '—'}</td>
-      <td>${c.zalo || '—'}</td>
-      <td>${c.email || '—'}</td>
-      <td style="color:var(--gray);font-size:13px">${fmtDate(c.registered_at)}</td>
-      <td><div class="actions">
-        <button class="btn btn-warning" onclick="editCustomer(${c.id})">✏️ Sửa</button>
-        <button class="btn btn-danger"  onclick="deleteCustomer(${c.id})">🗑️</button>
-      </div></td>
-    </tr>
-  `).join('');
+
+  tbody.innerHTML = data.map((c, i) => {
+    const missingAddr = !c.address || !c.address.trim();
+    return `<tr>
+      <td style="color:var(--gray);font-size:13px">${i + 1}</td>
+      <td>
+        <strong>${escHtml(c.name)}</strong>
+        <button onclick="copyCustomerInfo(${c.id})" title="Copy thông tin để in sớ"
+          style="margin-left:8px;background:none;border:1px solid #e5d8c0;border-radius:5px;padding:2px 8px;cursor:pointer;font-size:11px;color:#666">📋</button>
+      </td>
+      <td>${c.phone ? `<a href="tel:${c.phone}" style="color:#1d4ed8;text-decoration:none">${escHtml(c.phone)}</a>` : '<span style="color:#ccc">—</span>'}</td>
+      <td style="max-width:180px;font-size:13px">
+        ${missingAddr
+          ? '<span style="color:#f59e0b;font-weight:600">⚠️ Chưa có địa chỉ</span>'
+          : `<span title="${escHtml(c.address)}">${escHtml(c.address).substring(0,40)}${c.address.length>40?'…':''}</span>`
+        }
+      </td>
+      <td style="font-size:13px;color:var(--gray)">${escHtml(c.email || '—')}</td>
+      <td style="color:var(--gray);font-size:12px;white-space:nowrap">${fmtDate(c.registered_at)}</td>
+      <td>
+        <div class="actions">
+          <button class="btn btn-warning" onclick="editCustomer(${c.id})">✏️ Sửa</button>
+          <button class="btn btn-danger"  onclick="deleteCustomer(${c.id})">🗑️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
+// Khi bấm Sửa: điền đúng dữ liệu vào form TRƯỚC khi mở modal
 function editCustomer(id) {
   const c = customersData.find(x => x.id === id);
-  if (!c) return;
-  document.getElementById('customer-id').value = c.id;
-  document.getElementById('customer-name').value = c.name;
-  document.getElementById('customer-phone').value = c.phone || '';
-  document.getElementById('customer-zalo').value = c.zalo || '';
-  document.getElementById('customer-email').value = c.email || '';
-  document.getElementById('modal-customer-title').textContent = 'Chỉnh sửa phật tử';
-  openModal('customer');
+  if (!c) { toast('❌ Không tìm thấy phật tử', 'error'); return; }
+
+  // Điền dữ liệu vào form
+  document.getElementById('customer-id').value      = c.id;
+  document.getElementById('customer-name').value    = c.name    || '';
+  document.getElementById('customer-phone').value   = c.phone   || '';
+  document.getElementById('customer-zalo').value    = c.zalo    || '';
+  document.getElementById('customer-email').value   = c.email   || '';
+  document.getElementById('customer-address').value = c.address || '';
+
+  // Đổi tiêu đề modal
+  document.getElementById('modal-customer-title').textContent = '✏️ Sửa thông tin phật tử';
+
+  // Mở modal (KHÔNG gọi clearForm)
+  document.getElementById('modal-customer').classList.add('open');
 }
 
+// Lưu phật tử (thêm mới hoặc cập nhật)
 async function saveCustomer() {
-  const id = document.getElementById('customer-id').value;
-  const name = document.getElementById('customer-name').value.trim();
-  const phone = document.getElementById('customer-phone').value.trim();
-  const zalo  = document.getElementById('customer-zalo').value.trim();
-  const email = document.getElementById('customer-email').value.trim();
-  if (!name) return toast('Vui lòng nhập họ tên', 'error');
+  const id      = document.getElementById('customer-id').value.trim();
+  const name    = document.getElementById('customer-name').value.trim();
+  const phone   = document.getElementById('customer-phone').value.trim();
+  const zalo    = document.getElementById('customer-zalo').value.trim();
+  const email   = document.getElementById('customer-email').value.trim();
+  const address = document.getElementById('customer-address').value.trim();
 
-  const url = id ? '/api/customers/' + id : '/api/customers';
+  if (!name) { toast('❌ Vui lòng nhập họ và tên phật tử', 'error'); return; }
+
+  const url    = id ? '/api/customers/' + id : '/api/customers';
   const method = id ? 'PUT' : 'POST';
-  await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, phone, zalo, email}) });
-  closeModal('customer');
-  loadCustomers();
-  toast(id ? '✅ Đã cập nhật phật tử' : '✅ Đã thêm phật tử mới', 'success');
+  const body   = { name, phone, zalo, email, address };
+
+  try {
+    const res  = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (data.error) { toast('❌ ' + data.error, 'error'); return; }
+    closeModal('customer');
+    await loadCustomers();
+    toast(id ? '✅ Đã cập nhật thông tin phật tử' : '✅ Đã thêm phật tử mới', 'success');
+  } catch(e) {
+    toast('❌ Lỗi kết nối: ' + e.message, 'error');
+  }
 }
 
+// Xóa phật tử
 async function deleteCustomer(id) {
-  if (!confirm('Xoá phật tử này?')) return;
-  await fetch('/api/customers/' + id, { method: 'DELETE' });
-  loadCustomers();
-  toast('🗑️ Đã xoá phật tử');
+  const c = customersData.find(x => x.id === id);
+  if (!confirm(`Xoá phật tử "${c?.name || id}"?\nThao tác này không thể hoàn tác!`)) return;
+  try {
+    await fetch('/api/customers/' + id, { method: 'DELETE' });
+    await loadCustomers();
+    toast('🗑️ Đã xoá phật tử');
+  } catch(e) {
+    toast('❌ Lỗi khi xoá: ' + e.message, 'error');
+  }
+}
+
+// Copy thông tin phật tử để in sớ (1 click)
+function copyCustomerInfo(id) {
+  const c = customersData.find(x => x.id === id);
+  if (!c) return;
+  const text = [
+    `Họ tên:    ${c.name}`,
+    `Điện thoại: ${c.phone || '(không có)'}`,
+    `Địa chỉ:   ${c.address || '(chưa có địa chỉ — cần bổ sung)'}`,
+    c.zalo  ? `Zalo: ${c.zalo}`   : null,
+    c.email ? `Email: ${c.email}` : null,
+  ].filter(Boolean).join('\n');
+  try { navigator.clipboard.writeText(text); } catch(e) {
+    const t = document.createElement('textarea');
+    t.value = text; document.body.appendChild(t); t.select();
+    document.execCommand('copy'); document.body.removeChild(t);
+  }
+  toast('📋 Đã copy thông tin phật tử');
+}
+
+// Helper: escape HTML để tránh XSS
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ─── ORDERS ───────────────────────────────────────────────────

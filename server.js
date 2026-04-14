@@ -274,6 +274,7 @@ db.exec(`
     phone         TEXT,
     zalo          TEXT,
     email         TEXT,
+    address       TEXT,
     registered_at TEXT DEFAULT (datetime('now','localtime'))
   );
 
@@ -368,6 +369,12 @@ function setAdminPass(newPass) {
 if (!db.prepare("SELECT value FROM settings WHERE key='admin_pass'").get()) {
   setAdminPass(ADMIN_DEFAULT_PASS);
 }
+
+// Migration: thêm cột address nếu chưa có (DB cũ)
+try {
+  db.exec("ALTER TABLE customers ADD COLUMN address TEXT");
+  console.log('✅ Migration: đã thêm cột address vào customers');
+} catch(e) { /* cột đã tồn tại, bỏ qua */ }
 
 // Seed sản phẩm mẫu
 const { cnt } = db.prepare('SELECT COUNT(*) as cnt FROM products').get();
@@ -492,41 +499,59 @@ app.delete('/api/products/:id', (req, res) => {
 });
 
 // ─── API: CUSTOMERS ────────────────────────────────────────────
-app.get('/api/customers', (req, res) => {
+// ─── API: CUSTOMERS ────────────────────────────────────────────
+// GET: chỉ admin mới xem được danh sách phật tử
+app.get('/api/customers', requireAdmin, (req, res) => {
   res.json(db.prepare('SELECT * FROM customers ORDER BY id DESC').all());
 });
 
+// GET 1: lấy thông tin 1 phật tử (dùng khi trang công đức check trùng SĐT)
+app.get('/api/customers/check', (req, res) => {
+  const { phone } = req.query;
+  if (!phone) return res.json({ exists: false });
+  const row = db.prepare('SELECT id, name FROM customers WHERE phone=?').get(phone);
+  res.json(row ? { exists: true, id: row.id, name: row.name } : { exists: false });
+});
+
+// POST: tạo mới (từ trang công đức — public)
 app.post('/api/customers', async (req, res) => {
-  const { name, phone, zalo, email } = req.body;
+  const { name, phone, zalo, email, address } = req.body;
   if (!name) return res.status(400).json({ error: 'Thiếu tên' });
 
-  // Kiểm tra khách cũ
+  // Kiểm tra trùng SĐT
   if (phone) {
     const ex = db.prepare('SELECT id FROM customers WHERE phone=?').get(phone);
     if (ex) return res.json({ id: ex.id, existing: true });
   }
 
-  const r = db.prepare('INSERT INTO customers (name,phone,zalo,email) VALUES (?,?,?,?)')
-    .run(name, phone ?? '', zalo ?? '', email ?? '');
+  const r = db.prepare('INSERT INTO customers (name,phone,zalo,email,address) VALUES (?,?,?,?,?)')
+    .run(name, phone||'', zalo||'', email||'', address||'');
   const customerId = r.lastInsertRowid;
 
-  // 🤖 TỰ ĐỘNG GỬI EMAIL CHÀO MỪNG + LÊN LỊCH EMAIL TIẾP THEO
+  // Tự động gửi email chào mừng
   if (email && email.includes('@')) {
-    scheduleEmail(customerId, name, email, 'welcome', 0);   // Gửi ngay
-    scheduleEmail(customerId, name, email, 'value',   2);   // 2 ngày sau
-    scheduleEmail(customerId, name, email, 'invite',  3);   // 3 ngày sau
+    scheduleEmail(customerId, name, email, 'welcome', 0);
+    scheduleEmail(customerId, name, email, 'value',   2);
+    scheduleEmail(customerId, name, email, 'invite',  3);
   }
 
   res.json({ id: customerId });
 });
 
-app.put('/api/customers/:id', (req, res) => {
-  const { name, phone, zalo, email } = req.body;
-  db.prepare('UPDATE customers SET name=?,phone=?,zalo=?,email=? WHERE id=?')
-    .run(name, phone, zalo, email, req.params.id);
+// PUT: sửa (admin only)
+app.put('/api/customers/:id', requireAdmin, (req, res) => {
+  const { name, phone, zalo, email, address } = req.body;
+  if (!name) return res.status(400).json({ error: 'Thiếu tên' });
+  const id = parseInt(req.params.id);
+  const exists = db.prepare('SELECT id FROM customers WHERE id=?').get(id);
+  if (!exists) return res.status(404).json({ error: 'Không tìm thấy' });
+  db.prepare('UPDATE customers SET name=?,phone=?,zalo=?,email=?,address=? WHERE id=?')
+    .run(name, phone||'', zalo||'', email||'', address||'', id);
   res.json({ success: true });
 });
-app.delete('/api/customers/:id', (req, res) => {
+
+// DELETE: xóa (admin only)
+app.delete('/api/customers/:id', requireAdmin, (req, res) => {
   db.prepare('DELETE FROM customers WHERE id=?').run(req.params.id);
   res.json({ success: true });
 });
