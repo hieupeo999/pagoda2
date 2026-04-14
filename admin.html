@@ -218,6 +218,9 @@
   <div class="tab" onclick="switchTab('orders')" id="tab-orders">
     🧾 Đơn hàng <span id="cnt-orders" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
   </div>
+  <div class="tab" onclick="switchTab('lichle')" id="tab-lichle">
+    📅 Lịch Lễ <span id="cnt-lichle" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
+  </div>
   <div class="tab" onclick="switchTab('security')" id="tab-security">
     🔒 Bảo mật
   </div>
@@ -403,6 +406,157 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════
+     📅  PANEL LỊCH LỄ
+════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-lichle">
+
+  <!-- Stats lịch lễ -->
+  <div id="ll-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-bottom:24px"></div>
+
+  <!-- Toolbar -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px">
+    <input id="ll-search" type="text" placeholder="🔍 Tìm họ tên, SĐT, địa chỉ..." oninput="llSearch(this.value)"
+      style="flex:1;min-width:200px;padding:10px 14px;border:1px solid #e5d8c0;border-radius:8px;font-size:14px">
+    <select id="ll-filter" onchange="llLoadDon()" style="padding:10px 14px;border:1px solid #e5d8c0;border-radius:8px;font-size:14px;background:#fff">
+      <option value="all">📋 Tất cả</option>
+      <option value="chua_hen">⏳ Chưa hẹn</option>
+      <option value="da_hen">✅ Đã hẹn</option>
+      <option value="da_xin_doi_lich">🔄 Đổi lịch</option>
+      <option value="da_hoan_thanh">🎉 Hoàn thành</option>
+    </select>
+    <button onclick="llOpenTab('list')" id="ll-btn-list" style="padding:10px 16px;background:var(--crimson);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px">📋 Danh sách</button>
+    <button onclick="llOpenTab('calendar')" id="ll-btn-cal" style="padding:10px 16px;background:#fff;color:var(--crimson);border:1px solid var(--crimson);border-radius:8px;cursor:pointer;font-size:13px">📅 Lịch tháng</button>
+    <button onclick="llCopyAll()" style="padding:10px 16px;background:var(--gold);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px">📋 Copy tất cả</button>
+    <button onclick="openLLNewModal()" style="padding:10px 18px;background:var(--crimson-dark);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">+ Thêm đơn mới</button>
+  </div>
+
+  <!-- Lịch tháng -->
+  <div id="ll-calendar-wrap" style="display:none;background:#fff;border-radius:14px;border:1px solid #e5d8c0;padding:20px;margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <button onclick="llCalPrev()" style="padding:6px 14px;border:1px solid #e5d8c0;border-radius:6px;background:#fff;cursor:pointer;font-size:16px">‹</button>
+      <strong id="ll-cal-title" style="font-size:17px;color:var(--crimson-dark);flex:1;text-align:center"></strong>
+      <button onclick="llCalNext()" style="padding:6px 14px;border:1px solid #e5d8c0;border-radius:6px;background:#fff;cursor:pointer;font-size:16px">›</button>
+    </div>
+    <div id="ll-cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center"></div>
+    <div style="display:flex;gap:16px;margin-top:14px;font-size:12px;flex-wrap:wrap">
+      <span>🟢 Đã hẹn</span><span>🟣 Đổi lịch</span><span>🔵 Hoàn thành</span><span>⚪ Chưa hẹn</span>
+    </div>
+  </div>
+
+  <!-- Danh sách đơn -->
+  <div id="ll-list-wrap">
+    <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e5d8c0;font-size:13px">
+      <thead>
+        <tr style="background:var(--crimson-dark);color:#fff">
+          <th style="padding:12px 10px;text-align:left">Họ tên</th>
+          <th style="padding:12px 10px">SĐT</th>
+          <th style="padding:12px 10px">Dịch vụ</th>
+          <th style="padding:12px 10px">Số tiền</th>
+          <th style="padding:12px 10px">Ngày âm</th>
+          <th style="padding:12px 10px">TT lịch</th>
+          <th style="padding:12px 10px">TT tiền</th>
+          <th style="padding:12px 10px">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody id="ll-table-body">
+        <tr><td colspan="8" style="text-align:center;padding:20px;color:#999">Đang tải...</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+</div><!-- end panel-lichle -->
+
+<!-- MODAL: Thêm đơn mới (phật tử + đơn) -->
+<div id="ll-modal-new" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;overflow-y:auto;padding:20px">
+  <div style="background:#fff;border-radius:16px;max-width:540px;margin:0 auto;padding:32px;position:relative">
+    <button onclick="closeLLModal('new')" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#999">×</button>
+    <h3 style="color:var(--crimson-dark);margin-bottom:20px;font-size:18px">📝 Thêm đơn công đức mới</h3>
+    <div style="background:#faf5ea;border-radius:10px;padding:14px;margin-bottom:18px;font-size:13px;color:#555;border:1px solid #e5d8c0">
+      🙏 Kính mong quý Phật tử hoan hỷ kiểm tra kỹ ngày dương lịch và đối chiếu với ngày âm lịch tương ứng trước khi xác nhận, để buổi lễ được trang nghiêm và viên mãn.
+    </div>
+
+    <div id="ll-pt-select" style="margin-bottom:14px">
+      <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:6px">Phật tử</label>
+      <div style="display:flex;gap:8px">
+        <input id="ll-pt-search-inp" type="text" placeholder="Tìm phật tử (tên/SĐT)..." oninput="llSearchPT(this.value)"
+          style="flex:1;padding:9px 12px;border:1px solid #e5d8c0;border-radius:8px;font-size:13px">
+        <button onclick="showLLNewPTForm()" style="padding:9px 14px;background:var(--crimson);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px">+ Mới</button>
+      </div>
+      <div id="ll-pt-results" style="border:1px solid #e5d8c0;border-radius:8px;margin-top:4px;max-height:160px;overflow-y:auto;display:none;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.1)"></div>
+      <div id="ll-pt-selected" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;margin-top:6px;font-size:13px"></div>
+    </div>
+
+    <div id="ll-new-pt-form" style="display:none;border:1px solid #e5d8c0;border-radius:10px;padding:16px;background:#fafafa;margin-bottom:14px">
+      <p style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--crimson)">Thêm phật tử mới</p>
+      <input id="ll-npt-ten" type="text" placeholder="Họ và tên *" style="width:100%;padding:8px 12px;border:1px solid #e5d8c0;border-radius:6px;font-size:13px;margin-bottom:8px">
+      <input id="ll-npt-sdt" type="text" placeholder="Số điện thoại" style="width:100%;padding:8px 12px;border:1px solid #e5d8c0;border-radius:6px;font-size:13px;margin-bottom:8px">
+      <input id="ll-npt-dc" type="text" placeholder="Địa chỉ" style="width:100%;padding:8px 12px;border:1px solid #e5d8c0;border-radius:6px;font-size:13px;margin-bottom:10px">
+      <button onclick="llCreatePT()" style="padding:8px 16px;background:var(--crimson);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">✅ Lưu phật tử</button>
+    </div>
+    <input id="ll-selected-pt-id" type="hidden" value="">
+
+    <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:6px">Dịch vụ</label>
+    <select id="ll-dich-vu" style="width:100%;padding:9px 12px;border:1px solid #e5d8c0;border-radius:8px;font-size:13px;margin-bottom:12px;background:#fff">
+      <option value="Dâng sớ cầu an">🌸 Dâng sớ cầu an</option>
+      <option value="Lễ cầu siêu">🕯️ Lễ cầu siêu</option>
+      <option value="Lễ bán khoán">👶 Lễ bán khoán</option>
+      <option value="Khác">📿 Khác</option>
+    </select>
+
+    <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:6px">Nội dung cầu nguyện</label>
+    <textarea id="ll-noi-dung" rows="2" placeholder="Cầu bình an cho..." style="width:100%;padding:9px 12px;border:1px solid #e5d8c0;border-radius:8px;font-size:13px;resize:vertical;margin-bottom:12px"></textarea>
+
+    <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:6px">Số tiền công đức</label>
+    <input id="ll-so-tien" type="number" placeholder="0 (tùy tâm)" style="width:100%;padding:9px 12px;border:1px solid #e5d8c0;border-radius:8px;font-size:13px;margin-bottom:12px">
+
+    <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:6px">Ngày làm lễ (dương lịch)</label>
+    <input id="ll-ngay-duong" type="date" onchange="llPreviewLunar()" style="width:100%;padding:9px 12px;border:1px solid #e5d8c0;border-radius:8px;font-size:13px;margin-bottom:8px">
+    <div id="ll-ngay-am-preview" style="font-size:13px;color:var(--crimson);font-weight:600;margin-bottom:8px;min-height:20px"></div>
+    <label id="ll-check-label" style="display:none;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;cursor:pointer">
+      <input type="checkbox" id="ll-confirmed"> Tôi đã kiểm tra đúng ngày âm lịch
+    </label>
+
+    <button onclick="llSubmitNew()" style="width:100%;padding:13px;background:linear-gradient(135deg,var(--crimson-dark),var(--crimson));color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer">
+      ✅ Lưu đơn công đức
+    </button>
+  </div>
+</div>
+
+<!-- MODAL: Chi tiết đơn / Đặt lịch / Sửa lịch -->
+<div id="ll-modal-detail" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;overflow-y:auto;padding:20px">
+  <div style="background:#fff;border-radius:16px;max-width:520px;margin:0 auto;padding:28px;position:relative">
+    <button onclick="closeLLModal('detail')" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:22px;cursor:pointer;color:#999">×</button>
+    <h3 id="ll-detail-title" style="color:var(--crimson-dark);margin-bottom:18px;font-size:17px">📋 Chi tiết đơn</h3>
+    <div id="ll-detail-body"></div>
+
+    <div style="border-top:1px solid #e5d8c0;margin-top:16px;padding-top:16px">
+      <div style="background:#faf5ea;border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;color:#555;border:1px solid #e5d8c0">
+        🙏 Kính mong quý Phật tử hoan hỷ kiểm tra kỹ ngày dương lịch và đối chiếu với ngày âm lịch tương ứng trước khi xác nhận, để buổi lễ được trang nghiêm và viên mãn.
+      </div>
+      <label style="font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:6px">📅 Ngày làm lễ (dương lịch)</label>
+      <input id="ll-edit-ngay" type="date" onchange="llPreviewLunarEdit()" style="width:100%;padding:9px 12px;border:1px solid #e5d8c0;border-radius:8px;font-size:13px;margin-bottom:8px">
+      <div id="ll-edit-am-preview" style="font-size:13px;color:var(--crimson);font-weight:600;margin-bottom:8px;min-height:20px"></div>
+      <label id="ll-edit-check-label" style="display:none;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;cursor:pointer">
+        <input type="checkbox" id="ll-edit-confirmed"> Tôi đã kiểm tra đúng ngày âm lịch
+      </label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="llSaveDate()" style="flex:1;padding:10px;background:var(--crimson);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">📅 Lưu lịch</button>
+        <button id="ll-btn-hoan-thanh" onclick="llMarkDone()" style="flex:1;padding:10px;background:#166534;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">✅ Hoàn thành</button>
+        <button id="ll-btn-tt" onclick="llTogglePayment()" style="flex:1;padding:10px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">💰 Đã chuyển</button>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid #e5d8c0;margin-top:16px;padding-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="llCopyOne()" style="padding:9px 14px;background:var(--gold);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px">📋 Copy thông tin</button>
+      <button onclick="llDeleteDon()" style="padding:9px 14px;background:#fee2e2;color:#991b1b;border:none;border-radius:8px;cursor:pointer;font-size:13px">🗑️ Xóa đơn</button>
+    </div>
+    <div id="ll-lich-su" style="display:none;margin-top:14px;font-size:12px;color:#666;border-top:1px solid #e5d8c0;padding-top:12px"></div>
+  </div>
+</div>
+
 <!-- ── PANEL BẢO MẬT ── -->
 <div class="panel" id="panel-security" style="display:none;max-width:480px;margin:32px auto">
   <div class="card" style="background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 20px rgba(0,0,0,0.07);border:1px solid #e5d8c0">
@@ -462,6 +616,7 @@ function switchTab(name) {
   document.getElementById('panel-' + name).classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'dashboard') loadDashboard();
+  if (name === 'lichle') { llLoadStats(); llLoadDon(); }
 }
 
 // ─── SEARCH FILTER ────────────────────────────────────────────
@@ -909,6 +1064,276 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
     }
   });
 });
+
+// ══════════════════════════════════════════════════════════
+// 📅  LỊCH LỄ – PHẬT TỬ
+// ══════════════════════════════════════════════════════════
+let llDons = [], llCurrentDon = null, llCalYear = new Date().getFullYear(), llCalMonth = new Date().getMonth()+1, llView = 'list';
+
+function llOpenTab(view) {
+  llView = view;
+  document.getElementById('ll-list-wrap').style.display = view === 'list' ? 'block' : 'none';
+  document.getElementById('ll-calendar-wrap').style.display = view === 'calendar' ? 'block' : 'none';
+  document.getElementById('ll-btn-list').style.background = view === 'list' ? 'var(--crimson)' : '#fff';
+  document.getElementById('ll-btn-list').style.color = view === 'list' ? '#fff' : 'var(--crimson)';
+  document.getElementById('ll-btn-cal').style.background = view === 'calendar' ? 'var(--crimson)' : '#fff';
+  document.getElementById('ll-btn-cal').style.color = view === 'calendar' ? '#fff' : 'var(--crimson)';
+  if (view === 'calendar') llRenderCalendar();
+}
+
+async function llLoadStats() {
+  try {
+    const s = await fetch('/api/lich-le/stats').then(r=>r.json());
+    document.getElementById('ll-stats').innerHTML = `
+      <div class="stat-card"><div class="label">Phật tử</div><div class="value">${s.tongPhatTu}</div></div>
+      <div class="stat-card"><div class="label">Tổng đơn</div><div class="value">${s.tongDon}</div></div>
+      <div class="stat-card"><div class="label">Chưa hẹn</div><div class="value" style="color:#854d0e">${s.chuaHen}</div></div>
+      <div class="stat-card"><div class="label">Sắp đến (7 ngày)</div><div class="value" style="color:#166534">${s.sapDen}</div></div>
+      <div class="stat-card"><div class="label">Tổng tiền đã CK</div><div class="value" style="font-size:18px">${Number(s.tongTienLe).toLocaleString('vi-VN')}đ</div></div>
+    `;
+    document.getElementById('cnt-lichle').textContent = s.chuaHen > 0 ? s.chuaHen : '';
+  } catch(e){}
+}
+
+async function llLoadDon() {
+  const filter = document.getElementById('ll-filter').value;
+  const url = '/api/don-cong-duc' + (filter !== 'all' ? '?trang_thai='+filter : '');
+  try {
+    llDons = await fetch(url).then(r=>r.json());
+    llRenderTable(llDons);
+  } catch(e){}
+}
+
+function llRenderTable(rows) {
+  const ttLabels = {chua_hen:'⏳ Chưa hẹn',da_hen:'✅ Đã hẹn',da_xin_doi_lich:'🔄 Đổi lịch',da_hoan_thanh:'🎉 Hoàn thành'};
+  const ttColors  = {chua_hen:'#854d0e',da_hen:'#166534',da_xin_doi_lich:'#5b21b6',da_hoan_thanh:'#1d4ed8'};
+  const ttBg     = {chua_hen:'#fef9c3',da_hen:'#dcfce7',da_xin_doi_lich:'#ede9fe',da_hoan_thanh:'#dbeafe'};
+  const body = document.getElementById('ll-table-body');
+  if (!rows || !rows.length) { body.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;color:#999">Không có dữ liệu</td></tr>'; return; }
+  body.innerHTML = rows.map(r => {
+    const ttL = r.tt_lich||'chua_hen';
+    const ttT = r.tt_tt||'chua_chuyen';
+    return `<tr style="border-bottom:1px solid #f0e8d8;cursor:pointer" onclick="llOpenDetail(${r.id})">
+      <td style="padding:10px;font-weight:600;color:var(--crimson-dark)">${r.ho_ten||'–'}</td>
+      <td style="padding:10px;text-align:center">
+        <span onclick="event.stopPropagation();llCopyText('${r.so_dien_thoai||''}')" title="Click để copy" style="cursor:copy;color:#1d4ed8">${r.so_dien_thoai||'–'}</span>
+      </td>
+      <td style="padding:10px;text-align:center;font-size:12px">${r.dich_vu||'–'}</td>
+      <td style="padding:10px;text-align:center;color:var(--gold);font-weight:600">${r.so_tien?Number(r.so_tien).toLocaleString('vi-VN')+'đ':'tùy tâm'}</td>
+      <td style="padding:10px;text-align:center;font-weight:600;color:var(--crimson)">${r.ngay_am||'–'}</td>
+      <td style="padding:10px;text-align:center"><span style="background:${ttBg[ttL]};color:${ttColors[ttL]};padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600">${ttLabels[ttL]||ttL}</span></td>
+      <td style="padding:10px;text-align:center"><span style="background:${ttT==='da_chuyen'?'#dcfce7':'#fef9c3'};color:${ttT==='da_chuyen'?'#166534':'#854d0e'};padding:3px 10px;border-radius:20px;font-size:12px">${ttT==='da_chuyen'?'✅ Đã CK':'⏳ Chưa'}</span></td>
+      <td style="padding:10px;text-align:center">
+        <button onclick="event.stopPropagation();llOpenDetail(${r.id})" style="padding:5px 10px;background:var(--crimson);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">Chi tiết</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function llSearch(q) {
+  if (!q.trim()) { llRenderTable(llDons); return; }
+  q = q.toLowerCase();
+  const filtered = llDons.filter(r => (r.ho_ten||'').toLowerCase().includes(q) || (r.so_dien_thoai||'').includes(q) || (r.dia_chi||'').toLowerCase().includes(q));
+  llRenderTable(filtered);
+}
+
+async function llSearchPT(q) {
+  if (q.length < 1) { document.getElementById('ll-pt-results').style.display='none'; return; }
+  const rows = await fetch('/api/phat-tu/tim-kiem?q='+encodeURIComponent(q)).then(r=>r.json());
+  const box = document.getElementById('ll-pt-results');
+  if (!rows.length) { box.innerHTML='<div style="padding:10px 14px;color:#999;font-size:13px">Không tìm thấy</div>'; box.style.display='block'; return; }
+  const unique = [...new Map(rows.filter(r=>r.phat_tu_id).map(r=>[r.phat_tu_id,r])).values()];
+  box.innerHTML = unique.map(r=>`<div onclick="llSelectPT(${r.phat_tu_id},'${(r.ho_ten||'').replace(/'/g,"\\'")}','${(r.so_dien_thoai||'').replace(/'/g,"\\'")}','${(r.dia_chi||'').replace(/'/g,"\\'")}')}" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0e8d8;font-size:13px;hover:background:#fafafa">${r.ho_ten} – ${r.so_dien_thoai||''} – ${r.dia_chi||''}</div>`).join('');
+  box.style.display = 'block';
+}
+
+function llSelectPT(id, ten, sdt, dc) {
+  document.getElementById('ll-selected-pt-id').value = id;
+  document.getElementById('ll-pt-selected').innerHTML = `<strong>${ten}</strong> | ${sdt} | ${dc} <span onclick="llDeselectPT()" style="margin-left:10px;color:#999;cursor:pointer">×</span>`;
+  document.getElementById('ll-pt-selected').style.display = 'block';
+  document.getElementById('ll-pt-results').style.display = 'none';
+  document.getElementById('ll-pt-search-inp').value = '';
+  document.getElementById('ll-new-pt-form').style.display = 'none';
+}
+function llDeselectPT() {
+  document.getElementById('ll-selected-pt-id').value='';
+  document.getElementById('ll-pt-selected').style.display='none';
+}
+
+function showLLNewPTForm() {
+  document.getElementById('ll-new-pt-form').style.display='block';
+  document.getElementById('ll-pt-results').style.display='none';
+}
+
+async function llCreatePT() {
+  const ten=document.getElementById('ll-npt-ten').value.trim();
+  const sdt=document.getElementById('ll-npt-sdt').value.trim();
+  const dc=document.getElementById('ll-npt-dc').value.trim();
+  if(!ten){toast('❌ Nhập họ tên phật tử','error');return;}
+  const r=await fetch('/api/phat-tu',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ho_ten:ten,so_dien_thoai:sdt,dia_chi:dc})}).then(r=>r.json());
+  if(r.id){llSelectPT(r.id,ten,sdt,dc);document.getElementById('ll-new-pt-form').style.display='none';toast('✅ Đã tạo phật tử mới');}
+  else toast('❌ '+(r.error||'Lỗi'),'error');
+}
+
+function llPreviewLunar() {
+  const v=document.getElementById('ll-ngay-duong').value;
+  if(!v){document.getElementById('ll-ngay-am-preview').textContent='';document.getElementById('ll-check-label').style.display='none';return;}
+  const [yy,mm,dd]=v.split('-').map(Number);
+  fetch(`/api/lunar?dd=${dd}&mm=${mm}&yy=${yy}`).then(r=>r.json()).then(r=>{
+    if(r.formatted){document.getElementById('ll-ngay-am-preview').textContent='📅 Ngày âm: '+r.formatted;document.getElementById('ll-check-label').style.display='flex';}
+  });
+}
+
+function llPreviewLunarEdit() {
+  const v=document.getElementById('ll-edit-ngay').value;
+  if(!v){document.getElementById('ll-edit-am-preview').textContent='';document.getElementById('ll-edit-check-label').style.display='none';return;}
+  const [yy,mm,dd]=v.split('-').map(Number);
+  fetch(`/api/lunar?dd=${dd}&mm=${mm}&yy=${yy}`).then(r=>r.json()).then(r=>{
+    if(r.formatted){document.getElementById('ll-edit-am-preview').textContent='📅 Ngày âm: '+r.formatted;document.getElementById('ll-edit-check-label').style.display='flex';}
+  });
+}
+
+async function llSubmitNew() {
+  const ptId=document.getElementById('ll-selected-pt-id').value;
+  if(!ptId){toast('❌ Chọn phật tử trước','error');return;}
+  const ngay=document.getElementById('ll-ngay-duong').value;
+  if(ngay&&!document.getElementById('ll-confirmed').checked){toast('❌ Hãy tích xác nhận ngày âm lịch','error');return;}
+  const body={phat_tu_id:ptId,dich_vu:document.getElementById('ll-dich-vu').value,noi_dung_cau_nguyen:document.getElementById('ll-noi-dung').value,so_tien:document.getElementById('ll-so-tien').value||0};
+  const r=await fetch('/api/don-cong-duc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  if(r.id){
+    if(ngay){await fetch(`/api/don-cong-duc/${r.id}/dat-lich`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ngay_duong:ngay})});}
+    closeLLModal('new');llLoadDon();llLoadStats();toast('✅ Đã lưu đơn công đức');
+  } else toast('❌ '+(r.error||'Lỗi'),'error');
+}
+
+async function llOpenDetail(donId) {
+  const don = llDons.find(d=>d.id===donId);
+  if(!don){const r=await fetch('/api/don-cong-duc').then(r=>r.json());const found=r.find(d=>d.id===donId);if(!found)return;llCurrentDon=found;}
+  else llCurrentDon=don;
+  const d=llCurrentDon;
+  const ttLabels={chua_hen:'⏳ Chưa hẹn',da_hen:'✅ Đã hẹn',da_xin_doi_lich:'🔄 Đã đổi lịch',da_hoan_thanh:'🎉 Đã hoàn thành'};
+  document.getElementById('ll-detail-title').textContent=`📋 ${d.ho_ten||''}`;
+  document.getElementById('ll-detail-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;margin-bottom:14px">
+      <div><strong>Họ tên:</strong><br>${d.ho_ten||'–'} <button onclick="llCopyText('${d.ho_ten||''}')" style="background:none;border:none;cursor:pointer;font-size:11px;color:#1d4ed8">copy</button></div>
+      <div><strong>SĐT:</strong><br>${d.so_dien_thoai||'–'} <button onclick="llCopyText('${d.so_dien_thoai||''}')" style="background:none;border:none;cursor:pointer;font-size:11px;color:#1d4ed8">copy</button></div>
+      <div><strong>Địa chỉ:</strong><br>${d.dia_chi||'–'} <button onclick="llCopyText('${d.dia_chi||''}')" style="background:none;border:none;cursor:pointer;font-size:11px;color:#1d4ed8">copy</button></div>
+      <div><strong>Dịch vụ:</strong><br>${d.dich_vu||'–'}</div>
+      <div style="grid-column:1/-1"><strong>Nội dung:</strong><br>${d.noi_dung_cau_nguyen||'–'} <button onclick="llCopyText('${(d.noi_dung_cau_nguyen||'').replace(/'/g,"\\'")}')" style="background:none;border:none;cursor:pointer;font-size:11px;color:#1d4ed8">copy</button></div>
+      <div><strong>Số tiền:</strong><br><span style="color:var(--gold);font-weight:700">${d.so_tien?Number(d.so_tien).toLocaleString('vi-VN')+'đ':'tùy tâm'}</span></div>
+      <div><strong>Ngày âm:</strong><br><span style="color:var(--crimson);font-weight:600">${d.ngay_am||'Chưa đặt lịch'}</span></div>
+      <div><strong>TT lịch:</strong><br>${ttLabels[d.tt_lich||'chua_hen']||d.tt_lich}</div>
+      <div><strong>TT tiền:</strong><br>${d.tt_tt==='da_chuyen'?'✅ Đã chuyển':'⏳ Chưa chuyển'}</div>
+    </div>
+  `;
+  document.getElementById('ll-edit-ngay').value=d.ngay_duong||'';
+  document.getElementById('ll-edit-am-preview').textContent=d.ngay_am?'📅 Ngày âm: '+d.ngay_am:'';
+  document.getElementById('ll-edit-check-label').style.display=d.ngay_duong?'flex':'none';
+  document.getElementById('ll-edit-confirmed').checked=!!d.ngay_duong;
+  document.getElementById('ll-btn-tt').textContent=d.tt_tt==='da_chuyen'?'💰 Chưa chuyển':'💰 Đã chuyển';
+  document.getElementById('ll-btn-tt').style.background=d.tt_tt==='da_chuyen'?'#854d0e':'#1d4ed8';
+  // Lịch sử sửa
+  try {
+    const ls=await fetch(`/api/lich-su-sua/${donId}`).then(r=>r.json());
+    if(ls.length){document.getElementById('ll-lich-su').style.display='block';document.getElementById('ll-lich-su').innerHTML='<strong>Lịch sử sửa:</strong><br>'+ls.map(s=>`${s.thoi_gian_sua}: ${s.ngay_cu||'–'} → ${s.ngay_moi}`).join('<br>');}
+  }catch(e){}
+  document.getElementById('ll-modal-detail').style.display='flex';
+  document.getElementById('ll-modal-detail').style.alignItems='flex-start';
+}
+
+async function llSaveDate() {
+  const ngay=document.getElementById('ll-edit-ngay').value;
+  if(!ngay){toast('❌ Chọn ngày trước','error');return;}
+  if(!document.getElementById('ll-edit-confirmed').checked){toast('❌ Hãy tích xác nhận ngày âm lịch','error');return;}
+  const d=llCurrentDon;
+  const isNew=!d.lich_id||d.tt_lich==='chua_hen';
+  let r;
+  if(isNew||!d.lich_id){r=await fetch(`/api/don-cong-duc/${d.id}/dat-lich`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ngay_duong:ngay})}).then(r=>r.json());}
+  else{r=await fetch(`/api/lich-le/${d.lich_id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ngay_duong:ngay})}).then(r=>r.json());}
+  if(r.success){toast('✅ Đã lưu lịch. Ngày âm: '+r.ngay_am);closeLLModal('detail');llLoadDon();llLoadStats();}
+  else toast('❌ '+(r.error||'Lỗi'),'error');
+}
+
+async function llMarkDone() {
+  if(!llCurrentDon?.lich_id){toast('❌ Chưa có lịch lễ','error');return;}
+  if(!confirm('Đánh dấu đã hoàn thành buổi lễ?'))return;
+  const r=await fetch(`/api/lich-le/${llCurrentDon.lich_id}/hoan-thanh`,{method:'POST'}).then(r=>r.json());
+  if(r.success){toast('✅ Đã đánh dấu hoàn thành');closeLLModal('detail');llLoadDon();llLoadStats();}
+}
+
+async function llTogglePayment() {
+  const newStatus=llCurrentDon.tt_tt==='da_chuyen'?'chua_chuyen':'da_chuyen';
+  const r=await fetch(`/api/don-cong-duc/${llCurrentDon.id}/thanh-toan`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trang_thai:newStatus})}).then(r=>r.json());
+  if(r.success){toast('✅ Đã cập nhật trạng thái thanh toán');closeLLModal('detail');llLoadDon();llLoadStats();}
+}
+
+async function llDeleteDon() {
+  if(!confirm(`Xóa đơn của ${llCurrentDon?.ho_ten}? Không thể hoàn tác!`))return;
+  const r=await fetch(`/api/don-cong-duc/${llCurrentDon.id}`,{method:'DELETE'}).then(r=>r.json());
+  if(r.success){toast('✅ Đã xóa đơn');closeLLModal('detail');llLoadDon();llLoadStats();}
+}
+
+async function llCopyOne() {
+  const r=await fetch(`/api/copy-don/${llCurrentDon.id}`).then(r=>r.json());
+  llCopyText(r.text);toast('📋 Đã copy thông tin');
+}
+
+async function llCopyAll() {
+  const r=await fetch('/api/copy-tat-ca').then(r=>r.json());
+  llCopyText(r.text);toast('📋 Đã copy toàn bộ danh sách');
+}
+
+function llCopyText(text) {
+  try{navigator.clipboard.writeText(text);}catch(e){const t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);}
+}
+
+function openLLNewModal() {
+  document.getElementById('ll-selected-pt-id').value='';
+  document.getElementById('ll-pt-selected').style.display='none';
+  document.getElementById('ll-pt-search-inp').value='';
+  document.getElementById('ll-pt-results').style.display='none';
+  document.getElementById('ll-new-pt-form').style.display='none';
+  document.getElementById('ll-noi-dung').value='';
+  document.getElementById('ll-so-tien').value='';
+  document.getElementById('ll-ngay-duong').value='';
+  document.getElementById('ll-ngay-am-preview').textContent='';
+  document.getElementById('ll-confirmed').checked=false;
+  document.getElementById('ll-check-label').style.display='none';
+  document.getElementById('ll-modal-new').style.display='flex';
+  document.getElementById('ll-modal-new').style.alignItems='flex-start';
+}
+
+function closeLLModal(id) { document.getElementById('ll-modal-'+id).style.display='none'; }
+
+// Calendar
+async function llRenderCalendar() {
+  const data=await fetch(`/api/lich-le/calendar?month=${llCalMonth}&year=${llCalYear}`).then(r=>r.json());
+  const byDay={};
+  data.forEach(r=>{const d=r.ngay_duong?.slice(8,10);if(d)byDay[parseInt(d)]=(byDay[parseInt(d)]||[]).concat(r);});
+  const months=['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+  document.getElementById('ll-cal-title').textContent=`${months[llCalMonth-1]} ${llCalYear}`;
+  const first=new Date(llCalYear,llCalMonth-1,1).getDay();
+  const days=new Date(llCalYear,llCalMonth,0).getDate();
+  const ttColor={chua_hen:'#d97706',da_hen:'#16a34a',da_xin_doi_lich:'#7c3aed',da_hoan_thanh:'#1d4ed8'};
+  let html='';
+  ['CN','T2','T3','T4','T5','T6','T7'].forEach(d=>{html+=`<div style="font-size:11px;font-weight:600;color:#888;padding:4px">${d}</div>`;});
+  for(let i=0;i<(first||7)%7;i++) html+='<div></div>';
+  for(let d=1;d<=days;d++){
+    const evs=byDay[d]||[];
+    const today=new Date();const isToday=today.getDate()===d&&today.getMonth()===llCalMonth-1&&today.getFullYear()===llCalYear;
+    html+=`<div style="min-height:52px;border:1px solid #e5d8c0;border-radius:6px;padding:4px;cursor:pointer;background:${isToday?'#fef9c3':'#fff'};font-size:12px" onclick="llCalDayClick(${d},${llCalYear},${llCalMonth})">
+      <div style="font-weight:600;color:${isToday?'var(--crimson)':'#333'}">${d}</div>
+      ${evs.map(e=>`<div style="background:${ttColor[e.trang_thai]||'#666'};color:#fff;border-radius:3px;padding:1px 4px;font-size:10px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.ho_ten||''}</div>`).join('')}
+    </div>`;
+  }
+  document.getElementById('ll-cal-grid').innerHTML=html;
+}
+
+function llCalPrev(){llCalMonth--;if(llCalMonth<1){llCalMonth=12;llCalYear--;}llRenderCalendar();}
+function llCalNext(){llCalMonth++;if(llCalMonth>12){llCalMonth=1;llCalYear++;}llRenderCalendar();}
+function llCalDayClick(d,y,m){const date=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const found=llDons.filter(r=>r.ngay_duong===date);if(found.length===1)llOpenDetail(found[0].id);else if(found.length>1)toast(`📅 ${found.length} buổi lễ ngày ${d}/${m}`);}
+
+
 </script>
 </body>
 </html>

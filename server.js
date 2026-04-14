@@ -310,6 +310,51 @@ db.exec(`
     sent_at        TEXT,
     status         TEXT DEFAULT 'pending'
   );
+
+  CREATE TABLE IF NOT EXISTS phat_tu (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    ho_ten          TEXT NOT NULL,
+    so_dien_thoai   TEXT,
+    dia_chi         TEXT,
+    created_at      TEXT DEFAULT (datetime('now','localtime'))
+  );
+
+  CREATE TABLE IF NOT EXISTS don_cong_duc (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    phat_tu_id            INTEGER NOT NULL,
+    dich_vu               TEXT,
+    noi_dung_cau_nguyen   TEXT,
+    so_tien               INTEGER DEFAULT 0,
+    ngay_tao              TEXT DEFAULT (datetime('now','localtime')),
+    FOREIGN KEY(phat_tu_id) REFERENCES phat_tu(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS thanh_toan_le (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    don_id      INTEGER NOT NULL,
+    trang_thai  TEXT DEFAULT 'chua_chuyen',
+    thoi_gian   TEXT DEFAULT (datetime('now','localtime')),
+    FOREIGN KEY(don_id) REFERENCES don_cong_duc(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS lich_le (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    don_id      INTEGER NOT NULL,
+    ngay_duong  TEXT,
+    ngay_am     TEXT,
+    trang_thai  TEXT DEFAULT 'chua_hen',
+    created_at  TEXT DEFAULT (datetime('now','localtime')),
+    updated_at  TEXT DEFAULT (datetime('now','localtime')),
+    FOREIGN KEY(don_id) REFERENCES don_cong_duc(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS lich_su_sua (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    don_id        INTEGER NOT NULL,
+    ngay_cu       TEXT,
+    ngay_moi      TEXT,
+    thoi_gian_sua TEXT DEFAULT (datetime('now','localtime'))
+  );
 `);
 
 // ─── ADMIN PASSWORD ────────────────────────────────────────────
@@ -632,6 +677,297 @@ app.post('/webhook/sepay', async (req, res) => {
 
   if (!matched) console.log(`ℹ️ Không khớp đơn nào: "${data.content}" (${amount}đ)`);
   res.json({ success: true });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// 🗓️  HỆ THỐNG LỊCH LỄ – PHẬT TỬ (chỉ Admin)
+// ═══════════════════════════════════════════════════════════════
+
+// ─── CHUYỂN ĐỔI ÂM LỊCH (Ho Ngoc Duc algorithm) ──────────────
+function ll_jdFromDate(dd, mm, yy) {
+  let a = Math.floor((14-mm)/12), y = yy+4800-a, m = mm+12*a-3;
+  let jd = dd + Math.floor((153*m+2)/5) + 365*y + Math.floor(y/4) - Math.floor(y/100) + Math.floor(y/400) - 32045;
+  if (jd < 2299161) jd = dd + Math.floor((153*m+2)/5) + 365*y + Math.floor(y/4) - 32083;
+  return jd;
+}
+function ll_newMoon(k, tz) {
+  const T=k/1236.85, T2=T*T, T3=T2*T, dr=Math.PI/180;
+  let Jd1=2415020.75933+29.53058868*k+0.0001178*T2-0.000000155*T3;
+  Jd1+=0.00033*Math.sin((166.56+132.87*T-0.009173*T2)*dr);
+  const M=357.5291+35999.0503*T-0.0001559*T2-0.00000048*T3;
+  const Mpr=306.0253+385.81691806*k+0.0107306*T2+0.00001236*T3;
+  const F=21.2964+390.67050646*k-0.0016528*T2-0.00000239*T3;
+  let C1=(0.1734-0.000393*T)*Math.sin(M*dr)+0.0021*Math.sin(2*dr*M)
+    -0.4068*Math.sin(Mpr*dr)+0.0161*Math.sin(dr*2*Mpr)-0.0004*Math.sin(dr*3*Mpr)
+    +0.0104*Math.sin(dr*2*F)-0.0051*Math.sin(dr*(M+Mpr))
+    -0.0074*Math.sin(dr*(M-Mpr))+0.0004*Math.sin(dr*(2*F+M))
+    -0.0004*Math.sin(dr*(2*F-M))-0.0006*Math.sin(dr*(2*F+Mpr))
+    +0.0010*Math.sin(dr*(2*F-Mpr))+0.0005*Math.sin(dr*(2*Mpr+M));
+  const dt=T<-11?0.001+0.000839*T+0.0002261*T2-0.00000845*T3-0.000000081*T*T3
+    :-0.000278+0.000265*T+0.000262*T2;
+  return Math.floor(Jd1+C1-dt+0.5+tz/24);
+}
+function ll_sunLong(jdn, tz) {
+  const T=(jdn-2451545.5-tz/24)/36525, T2=T*T, dr=Math.PI/180;
+  const M=357.5291+35999.0503*T-0.0001559*T2-0.00000048*T*T2;
+  const L0=280.46645+36000.76983*T+0.0003032*T2;
+  let DL=(1.9146-0.004817*T-0.000014*T2)*Math.sin(dr*M)+(0.019993-0.000101*T)*Math.sin(dr*2*M)+0.00029*Math.sin(dr*3*M);
+  let L=(L0+DL)*dr; L-=Math.PI*2*Math.floor(L/(Math.PI*2));
+  return Math.floor(L/Math.PI*6);
+}
+function ll_month11(yy, tz) {
+  const off=ll_jdFromDate(31,12,yy)-2415021;
+  const k=Math.floor(off/29.530588853);
+  let nm=ll_newMoon(k,tz);
+  if (ll_sunLong(nm,tz)>=9) nm=ll_newMoon(k-1,tz);
+  return nm;
+}
+function ll_leapOffset(a11, tz) {
+  const k=Math.floor((a11-2415021.076998695)/29.530588853+0.5);
+  let i=1, last=0, arc=ll_sunLong(ll_newMoon(k+i,tz),tz);
+  do { last=arc; i++; arc=ll_sunLong(ll_newMoon(k+i,tz),tz); } while(arc!==last&&i<14);
+  return i-1;
+}
+function solar2Lunar(dd, mm, yy) {
+  const tz=7, dayNum=ll_jdFromDate(dd,mm,yy);
+  const k=Math.floor((dayNum-2415021.076998695)/29.530588853);
+  let ms=ll_newMoon(k+1,tz); if(ms>dayNum) ms=ll_newMoon(k,tz);
+  let a11=ll_month11(yy,tz), b11=a11, lunarYear;
+  if(a11>=ms){lunarYear=yy;a11=ll_month11(yy-1,tz);}else{lunarYear=yy+1;b11=ll_month11(yy+1,tz);}
+  const lunarDay=dayNum-ms+1, diff=Math.floor((ms-a11)/29);
+  let leap=false, lunarMonth=diff+11;
+  if(b11-a11>365){const lo=ll_leapOffset(a11,tz);if(diff>=lo){lunarMonth=diff+10;if(diff===lo)leap=true;}}
+  if(lunarMonth>12)lunarMonth-=12;
+  if(lunarMonth>=11&&diff<4)lunarYear--;
+  return {ngayAm:lunarDay,thangAm:lunarMonth,namAm:lunarYear,nhuan:leap};
+}
+function formatLunar(dd, mm, yy) {
+  try {
+    const {ngayAm,thangAm,namAm,nhuan}=solar2Lunar(dd,mm,yy);
+    return `${ngayAm}/${thangAm}${nhuan?' (nhuận)':''}/${namAm}`;
+  } catch(e){return '';}
+}
+
+// ─── API ÂM LỊCH ──────────────────────────────────────────────
+app.get('/api/lunar', requireAdmin, (req,res) => {
+  const {dd,mm,yy}=req.query;
+  if(!dd||!mm||!yy) return res.json({error:'Thiếu tham số'});
+  try {
+    const r=solar2Lunar(parseInt(dd),parseInt(mm),parseInt(yy));
+    r.formatted=`${r.ngayAm}/${r.thangAm}${r.nhuan?' (nhuận)':''}/${r.namAm}`;
+    res.json(r);
+  } catch(e){res.json({error:e.message});}
+});
+
+// ─── API: PHẬT TỬ (Admin only) ────────────────────────────────
+app.get('/api/phat-tu', requireAdmin, (req,res) => {
+  res.json(db.prepare('SELECT * FROM phat_tu ORDER BY id DESC').all());
+});
+app.post('/api/phat-tu', requireAdmin, (req,res) => {
+  const {ho_ten,so_dien_thoai,dia_chi}=req.body;
+  if(!ho_ten) return res.json({error:'Thiếu họ tên'});
+  const r=db.prepare('INSERT INTO phat_tu (ho_ten,so_dien_thoai,dia_chi) VALUES (?,?,?)')
+    .run(ho_ten.trim(),so_dien_thoai||'',dia_chi||'');
+  res.json({id:r.lastInsertRowid});
+});
+app.put('/api/phat-tu/:id', requireAdmin, (req,res) => {
+  const {ho_ten,so_dien_thoai,dia_chi}=req.body;
+  db.prepare('UPDATE phat_tu SET ho_ten=?,so_dien_thoai=?,dia_chi=? WHERE id=?')
+    .run(ho_ten,so_dien_thoai||'',dia_chi||'',req.params.id);
+  res.json({success:true});
+});
+app.delete('/api/phat-tu/:id', requireAdmin, (req,res) => {
+  db.prepare('DELETE FROM phat_tu WHERE id=?').run(req.params.id);
+  res.json({success:true});
+});
+app.get('/api/phat-tu/tim-kiem', requireAdmin, (req,res) => {
+  const q='%'+(req.query.q||'')+'%';
+  const rows=db.prepare(`
+    SELECT d.*,p.ho_ten,p.so_dien_thoai,p.dia_chi,
+           tt.trang_thai as tt_tt,
+           l.id as lich_id,l.ngay_duong,l.ngay_am,l.trang_thai as tt_lich
+    FROM phat_tu p
+    LEFT JOIN don_cong_duc d ON d.phat_tu_id=p.id
+    LEFT JOIN thanh_toan_le tt ON tt.don_id=d.id
+    LEFT JOIN lich_le l ON l.don_id=d.id
+    WHERE p.ho_ten LIKE ? OR p.so_dien_thoai LIKE ? OR p.dia_chi LIKE ?
+    ORDER BY d.id DESC LIMIT 100
+  `).all(q,q,q);
+  res.json(rows);
+});
+app.get('/api/phat-tu/:id', requireAdmin, (req,res) => {
+  const pt=db.prepare('SELECT * FROM phat_tu WHERE id=?').get(req.params.id);
+  if(!pt) return res.json({error:'Không tìm thấy'});
+  const don=db.prepare(`
+    SELECT d.*,tt.trang_thai as tt_tt,l.id as lich_id,l.ngay_duong,l.ngay_am,l.trang_thai as tt_lich
+    FROM don_cong_duc d
+    LEFT JOIN thanh_toan_le tt ON tt.don_id=d.id
+    LEFT JOIN lich_le l ON l.don_id=d.id
+    WHERE d.phat_tu_id=? ORDER BY d.id DESC
+  `).all(req.params.id);
+  res.json({...pt,don});
+});
+
+// ─── API: ĐƠN CÔNG ĐỨC (Admin only) ─────────────────────────
+app.get('/api/don-cong-duc', requireAdmin, (req,res) => {
+  const {trang_thai}=req.query;
+  let where='', args=[];
+  if(trang_thai&&trang_thai!=='all'){where='WHERE l.trang_thai=?';args.push(trang_thai);}
+  const rows=db.prepare(`
+    SELECT d.*,p.ho_ten,p.so_dien_thoai,p.dia_chi,
+           tt.trang_thai as tt_tt,
+           l.id as lich_id,l.ngay_duong,l.ngay_am,l.trang_thai as tt_lich
+    FROM don_cong_duc d
+    LEFT JOIN phat_tu p ON p.id=d.phat_tu_id
+    LEFT JOIN thanh_toan_le tt ON tt.don_id=d.id
+    LEFT JOIN lich_le l ON l.don_id=d.id
+    ${where} ORDER BY d.id DESC LIMIT 500
+  `).all(...args);
+  res.json(rows);
+});
+app.post('/api/don-cong-duc', requireAdmin, (req,res) => {
+  const {phat_tu_id,dich_vu,noi_dung_cau_nguyen,so_tien}=req.body;
+  if(!phat_tu_id) return res.json({error:'Thiếu phật tử'});
+  const r=db.prepare('INSERT INTO don_cong_duc (phat_tu_id,dich_vu,noi_dung_cau_nguyen,so_tien) VALUES (?,?,?,?)')
+    .run(phat_tu_id,dich_vu||'',noi_dung_cau_nguyen||'',so_tien||0);
+  db.prepare('INSERT INTO thanh_toan_le (don_id) VALUES (?)').run(r.lastInsertRowid);
+  db.prepare('INSERT INTO lich_le (don_id) VALUES (?)').run(r.lastInsertRowid);
+  res.json({id:r.lastInsertRowid});
+});
+app.put('/api/don-cong-duc/:id', requireAdmin, (req,res) => {
+  const {dich_vu,noi_dung_cau_nguyen,so_tien}=req.body;
+  db.prepare('UPDATE don_cong_duc SET dich_vu=?,noi_dung_cau_nguyen=?,so_tien=? WHERE id=?')
+    .run(dich_vu||'',noi_dung_cau_nguyen||'',so_tien||0,req.params.id);
+  res.json({success:true});
+});
+app.delete('/api/don-cong-duc/:id', requireAdmin, (req,res) => {
+  const id=req.params.id;
+  db.prepare('DELETE FROM lich_su_sua WHERE don_id=?').run(id);
+  db.prepare('DELETE FROM lich_le WHERE don_id=?').run(id);
+  db.prepare('DELETE FROM thanh_toan_le WHERE don_id=?').run(id);
+  db.prepare('DELETE FROM don_cong_duc WHERE id=?').run(id);
+  res.json({success:true});
+});
+
+// ─── API: THANH TOÁN LỄ ───────────────────────────────────────
+app.post('/api/don-cong-duc/:id/thanh-toan', requireAdmin, (req,res) => {
+  const {trang_thai}=req.body;
+  db.prepare("UPDATE thanh_toan_le SET trang_thai=?,thoi_gian=datetime('now','localtime') WHERE don_id=?")
+    .run(trang_thai||'da_chuyen',req.params.id);
+  res.json({success:true});
+});
+
+// ─── API: ĐẶT LỊCH / SỬA LỊCH ───────────────────────────────
+app.post('/api/don-cong-duc/:id/dat-lich', requireAdmin, (req,res) => {
+  const {ngay_duong}=req.body;
+  if(!ngay_duong) return res.json({error:'Thiếu ngày'});
+  const [yy,mm,dd]=ngay_duong.split('-').map(Number);
+  const ngay_am=formatLunar(dd,mm,yy);
+  db.prepare("UPDATE lich_le SET ngay_duong=?,ngay_am=?,trang_thai='da_hen',updated_at=datetime('now','localtime') WHERE don_id=?")
+    .run(ngay_duong,ngay_am,req.params.id);
+  res.json({success:true,ngay_am});
+});
+app.put('/api/lich-le/:id', requireAdmin, (req,res) => {
+  const {ngay_duong}=req.body;
+  if(!ngay_duong) return res.json({error:'Thiếu ngày'});
+  const old=db.prepare('SELECT ngay_duong,don_id FROM lich_le WHERE id=?').get(req.params.id);
+  const [yy,mm,dd]=ngay_duong.split('-').map(Number);
+  const ngay_am=formatLunar(dd,mm,yy);
+  db.prepare("UPDATE lich_le SET ngay_duong=?,ngay_am=?,trang_thai='da_xin_doi_lich',updated_at=datetime('now','localtime') WHERE id=?")
+    .run(ngay_duong,ngay_am,req.params.id);
+  if(old) db.prepare('INSERT INTO lich_su_sua (don_id,ngay_cu,ngay_moi) VALUES (?,?,?)').run(old.don_id,old.ngay_duong,ngay_duong);
+  res.json({success:true,ngay_am});
+});
+app.post('/api/lich-le/:id/hoan-thanh', requireAdmin, (req,res) => {
+  db.prepare("UPDATE lich_le SET trang_thai='da_hoan_thanh',updated_at=datetime('now','localtime') WHERE id=?").run(req.params.id);
+  res.json({success:true});
+});
+
+// ─── API: CALENDAR LỊCH LỄ ───────────────────────────────────
+app.get('/api/lich-le/calendar', requireAdmin, (req,res) => {
+  const {month,year}=req.query;
+  if(!month||!year) return res.json({error:'Thiếu tháng/năm'});
+  const from=`${year}-${String(month).padStart(2,'0')}-01`;
+  const to  =`${year}-${String(month).padStart(2,'0')}-31`;
+  const rows=db.prepare(`
+    SELECT l.*,d.dich_vu,d.noi_dung_cau_nguyen,d.so_tien,
+           p.ho_ten,p.so_dien_thoai,p.dia_chi,d.id as don_id
+    FROM lich_le l
+    LEFT JOIN don_cong_duc d ON d.id=l.don_id
+    LEFT JOIN phat_tu p ON p.id=d.phat_tu_id
+    WHERE l.ngay_duong>=? AND l.ngay_duong<=?
+    ORDER BY l.ngay_duong ASC
+  `).all(from,to);
+  res.json(rows);
+});
+
+// ─── API: TÌM KIẾM PHẬT TỬ ───────────────────────────────────
+app.get('/api/phat-tu/search', requireAdmin, (req,res) => {
+  const q='%'+(req.query.q||'')+'%';
+  const rows=db.prepare(`
+    SELECT d.*,p.ho_ten,p.so_dien_thoai,p.dia_chi,
+           tt.trang_thai as tt_tt,
+           l.id as lich_id,l.ngay_duong,l.ngay_am,l.trang_thai as tt_lich
+    FROM phat_tu p
+    LEFT JOIN don_cong_duc d ON d.phat_tu_id=p.id
+    LEFT JOIN thanh_toan_le tt ON tt.don_id=d.id
+    LEFT JOIN lich_le l ON l.don_id=d.id
+    WHERE p.ho_ten LIKE ? OR p.so_dien_thoai LIKE ? OR p.dia_chi LIKE ?
+    ORDER BY d.id DESC LIMIT 100
+  `).all(q,q,q);
+  res.json(rows);
+});
+
+// ─── API: STATS LỊCH LỄ ──────────────────────────────────────
+app.get('/api/lich-le/stats', requireAdmin, (req,res) => {
+  const today=new Date().toISOString().slice(0,10);
+  const soon =new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+  const thisYear=new Date().getFullYear();
+  res.json({
+    chuaHen: db.prepare("SELECT COUNT(*) as c FROM lich_le WHERE trang_thai='chua_hen'").get().c,
+    sapDen:  db.prepare("SELECT COUNT(*) as c FROM lich_le WHERE trang_thai IN ('da_hen','da_xin_doi_lich') AND ngay_duong>=? AND ngay_duong<=?").get(today,soon).c,
+    tongDon: db.prepare("SELECT COUNT(*) as c FROM don_cong_duc").get().c,
+    tongPhatTu: db.prepare("SELECT COUNT(*) as c FROM phat_tu").get().c,
+    tongTienLe: db.prepare("SELECT COALESCE(SUM(d.so_tien),0) as s FROM don_cong_duc d INNER JOIN thanh_toan_le t ON t.don_id=d.id WHERE t.trang_thai='da_chuyen'").get().s,
+  });
+});
+
+// ─── API: COPY ────────────────────────────────────────────────
+app.get('/api/copy-don/:id', requireAdmin, (req,res) => {
+  const row=db.prepare(`
+    SELECT d.*,p.ho_ten,p.so_dien_thoai,p.dia_chi,l.ngay_am
+    FROM don_cong_duc d
+    LEFT JOIN phat_tu p ON p.id=d.phat_tu_id
+    LEFT JOIN lich_le l ON l.don_id=d.id
+    WHERE d.id=?
+  `).get(req.params.id);
+  if(!row) return res.json({error:'Không tìm thấy'});
+  const text=`Họ tên: ${row.ho_ten}\nSĐT: ${row.so_dien_thoai||''}\nĐịa chỉ: ${row.dia_chi||''}\nDịch vụ: ${row.dich_vu||''}\nNội dung: ${row.noi_dung_cau_nguyen||''}\nNgày lễ (âm): ${row.ngay_am||'Chưa đặt lịch'}`;
+  res.json({text});
+});
+app.get('/api/copy-nhom/:trang_thai', requireAdmin, (req,res) => {
+  const rows=db.prepare(`
+    SELECT p.ho_ten,p.so_dien_thoai,d.dich_vu,l.ngay_am
+    FROM lich_le l
+    LEFT JOIN don_cong_duc d ON d.id=l.don_id
+    LEFT JOIN phat_tu p ON p.id=d.phat_tu_id
+    WHERE l.trang_thai=? ORDER BY l.ngay_duong ASC
+  `).all(req.params.trang_thai);
+  const labels={chua_hen:'CHƯA HẸN',da_hen:'ĐÃ HẸN',da_xin_doi_lich:'ĐÃ ĐỔI LỊCH',da_hoan_thanh:'ĐÃ HOÀN THÀNH'};
+  const text=rows.length?`=== ${labels[req.params.trang_thai]||''} ===\n\n`+rows.map((r,i)=>`${i+1}. ${r.ho_ten} | SĐT: ${r.so_dien_thoai||''} | ${r.dich_vu||''} | Ngày âm: ${r.ngay_am||'Chưa đặt'}`).join('\n')
+    :`=== ${labels[req.params.trang_thai]||''} ===\n(Không có)`;
+  res.json({text});
+});
+app.get('/api/copy-tat-ca', requireAdmin, (req,res) => {
+  const daHen=db.prepare(`SELECT p.ho_ten,p.so_dien_thoai,d.dich_vu,l.ngay_am FROM lich_le l LEFT JOIN don_cong_duc d ON d.id=l.don_id LEFT JOIN phat_tu p ON p.id=d.phat_tu_id WHERE l.trang_thai IN ('da_hen','da_xin_doi_lich') ORDER BY l.ngay_duong ASC`).all();
+  const chuaHen=db.prepare(`SELECT p.ho_ten,p.so_dien_thoai,d.dich_vu,l.ngay_am FROM lich_le l LEFT JOIN don_cong_duc d ON d.id=l.don_id LEFT JOIN phat_tu p ON p.id=d.phat_tu_id WHERE l.trang_thai='chua_hen' ORDER BY d.id ASC`).all();
+  const fmt=(label,rows)=>rows.length?`=== ${label} ===\n\n`+rows.map((r,i)=>`${i+1}. ${r.ho_ten} | SĐT: ${r.so_dien_thoai||''} | ${r.dich_vu||''} | Ngày âm: ${r.ngay_am||'Chưa đặt'}`).join('\n'):`=== ${label} ===\n(Không có)`;
+  res.json({text:fmt('DANH SÁCH ĐÃ HẸN',daHen)+'\n\n'+'─'.repeat(40)+'\n\n'+fmt('CHƯA HẸN',chuaHen)});
+});
+
+// ─── API: LỊCH SỬ SỬA ────────────────────────────────────────
+app.get('/api/lich-su-sua/:don_id', requireAdmin, (req,res) => {
+  res.json(db.prepare('SELECT * FROM lich_su_sua WHERE don_id=? ORDER BY id DESC').all(req.params.don_id));
 });
 
 // ─── SCHEDULER: XỬ LÝ EMAIL QUEUE ────────────────────────────
