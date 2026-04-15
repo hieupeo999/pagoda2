@@ -879,24 +879,34 @@ function editProduct(id) {
 }
 
 async function saveProduct() {
-  const id = document.getElementById('product-id').value;
+  const id   = document.getElementById('product-id').value;
   const name = document.getElementById('product-name').value.trim();
   const price = parseInt(document.getElementById('product-price').value) || 0;
   const description = document.getElementById('product-description').value.trim();
-  if (!name) return toast('Vui lòng nhập tên nghi lễ', 'error');
+  if (!name) { toast('❌ Vui lòng nhập tên nghi lễ', 'error'); return; }
 
-  const url = id ? '/api/products/' + id : '/api/products';
-  const method = id ? 'PUT' : 'POST';
-  await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, price, description, quantity: -1}) });
-  closeModal('product');
-  loadProducts();
-  toast(id ? '✅ Đã cập nhật nghi lễ' : '✅ Đã thêm nghi lễ mới', 'success');
+  const btn = document.querySelector('#modal-product .btn-primary');
+  setBtnLoading(btn, true);
+  try {
+    const url = id ? '/api/products/' + id : '/api/products';
+    const res = await fetch(url, { method: id ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, price, description, quantity: -1}) });
+    const data = await res.json();
+    if (data.error) { toast('❌ ' + data.error, 'error'); return; }
+    closeModal('product');
+    await loadProducts();
+    toast(id ? '✅ Đã cập nhật nghi lễ' : '✅ Đã thêm nghi lễ mới', 'success');
+  } catch(e) {
+    toast('❌ Lỗi kết nối', 'error');
+  } finally {
+    setBtnLoading(btn, false);
+  }
 }
 
 async function deleteProduct(id) {
-  if (!confirm('Xoá nghi lễ này?')) return;
+  const p = productsData.find(x => x.id === id);
+  if (!confirm(`Xoá nghi lễ "${p?.name || id}"?`)) return;
   await fetch('/api/products/' + id, { method: 'DELETE' });
-  loadProducts();
+  await loadProducts();
   toast('🗑️ Đã xoá nghi lễ');
 }
 
@@ -1147,51 +1157,52 @@ async function saveOrder() {
   const amount = parseInt(document.getElementById('order-amount').value) || 0;
   const note   = document.getElementById('order-note').value.trim();
   const status = document.getElementById('order-status').value;
-  if (!customer_name) return toast('Vui lòng nhập tên phật tử', 'error');
-  if (!amount) return toast('Vui lòng nhập số tiền', 'error');
+  if (!customer_name) { toast('❌ Vui lòng nhập tên phật tử', 'error'); return; }
+  if (!amount)         { toast('❌ Vui lòng nhập số tiền công đức', 'error'); return; }
 
-  if (id) {
-    await fetch('/api/orders/' + id, {
-      method: 'PUT',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ status, customer_name, customer_phone, product_name, amount, note })
-    });
-  } else {
-    await fetch('/api/orders', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ customer_name, customer_phone, product_id, product_name, amount, note })
-    });
+  const btn = document.querySelector('#modal-order .btn-primary');
+  setBtnLoading(btn, true);
+  try {
+    const url  = id ? '/api/orders/' + id : '/api/orders';
+    const body = id
+      ? { status, customer_name, customer_phone, product_name, amount, note }
+      : { customer_name, customer_phone, product_id, product_name, amount, note };
+    await fetch(url, { method: id ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    closeModal('order');
+    await Promise.all([loadOrders(), loadDashboard()]);
+    toast(id ? '✅ Đã cập nhật đơn hàng' : '✅ Đã tạo đơn hàng mới', 'success');
+  } catch(e) {
+    toast('❌ Lỗi kết nối', 'error');
+  } finally {
+    setBtnLoading(btn, false);
   }
-  closeModal('order');
-  loadOrders();
-  loadCustomers();
-  toast(id ? '✅ Đã cập nhật đơn hàng' : '✅ Đã tạo đơn hàng mới', 'success');
 }
 
 async function markPaid(id) {
   const o = ordersData.find(x => x.id === id);
   if (!o) return;
-  await fetch('/api/orders/' + id, {
-    method: 'PUT',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({
-      status: 'success',
-      customer_name: o.customer_name,
-      customer_phone: o.customer_phone,
-      product_name: o.product_name,
-      amount: o.amount,
-      note: o.note
-    })
-  });
-  loadOrders();
-  toast('✅ Đã xác nhận Công Đức', 'success');
+  // Đổi nút thành loading ngay lập tức
+  const btn = event?.target;
+  setBtnLoading(btn, true);
+  try {
+    await fetch('/api/orders/' + id, {
+      method: 'PUT', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ status:'success', customer_name:o.customer_name,
+        customer_phone:o.customer_phone, product_name:o.product_name, amount:o.amount, note:o.note })
+    });
+    await Promise.all([loadOrders(), loadDashboard()]);
+    toast('✅ Đã xác nhận Công Đức thành công!', 'success');
+  } catch(e) {
+    toast('❌ Lỗi kết nối', 'error');
+    setBtnLoading(btn, false);
+  }
 }
 
 async function deleteOrder(id) {
-  if (!confirm('Xoá đơn hàng này?')) return;
+  const o = ordersData.find(x => x.id === id);
+  if (!confirm(`Xoá đơn hàng của "${o?.customer_name || id}"?\nThao tác không thể hoàn tác!`)) return;
   await fetch('/api/orders/' + id, { method: 'DELETE' });
-  loadOrders();
+  await Promise.all([loadOrders(), loadDashboard()]);
   toast('🗑️ Đã xoá đơn hàng');
 }
 
@@ -1237,6 +1248,19 @@ async function changePassword() {
     showErr('❌ Lỗi kết nối. Thử lại sau.');
   }
   btn.disabled = false; btn.textContent = '🔐 Cập nhật mật khẩu';
+}
+
+// ─── BUTTON LOADING STATE ─────────────────────────────────────
+function setBtnLoading(btn, loading) {
+  if (!btn) return;
+  if (loading) {
+    btn._origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ Đang xử lý...';
+  } else {
+    btn.disabled = false;
+    btn.textContent = btn._origText || btn.textContent;
+  }
 }
 
 // ─── TOAST ────────────────────────────────────────────────────
