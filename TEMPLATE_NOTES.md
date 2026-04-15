@@ -418,6 +418,92 @@ Tất cả routes lịch lễ đều requireAdmin.
 
 ---
 
+## 📱 MOBILE RESPONSIVE – HAMBURGER MENU
+
+> **Vấn đề:** `nav { display: none }` ở mobile → ẩn toàn bộ nav kể cả nút Admin, Công đức.
+> **Fix:** Thêm hamburger button + mobile overlay nav.
+
+**HTML (ngay trong `<header>` và sau `</header>`):**
+```html
+<!-- Trong header, sau </nav> -->
+<button class="menu-btn" id="menuBtn" onclick="toggleMobileMenu()" aria-label="Menu">
+  <span></span><span></span><span></span>
+</button>
+</header>
+
+<!-- Sau thẻ </header> -->
+<div class="mobile-nav" id="mobileNav">
+  <a href="#loingo"    onclick="closeMobileMenu()">Lời ngỏ</a>
+  <a href="#gioithieu" onclick="closeMobileMenu()">Giới thiệu</a>
+  <a href="#hoatdong"  onclick="closeMobileMenu()">Hoạt động</a>
+  <a href="#lichle"    onclick="closeMobileMenu()">Lịch lễ</a>
+  <a href="#hinhanh"   onclick="closeMobileMenu()">Hình ảnh</a>
+  <a href="#lienhe"    onclick="closeMobileMenu()">📞 Liên hệ</a>
+  <a href="/thanh-toan" class="mobile-cta">🪷 Dâng công đức</a>
+  <a href="/admin"      class="mobile-admin">⚙️ Quản lý Admin</a>
+</div>
+```
+
+**CSS (thêm vào style, trước @media mobile):**
+```css
+.menu-btn {
+  display: none; flex-direction: column; justify-content: center; gap: 5px;
+  width: 40px; height: 40px; background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
+  cursor: pointer; padding: 8px; z-index: 1100;
+}
+.menu-btn span { display: block; width: 100%; height: 2px; background: var(--gold-light); border-radius: 2px; transition: all 0.3s; }
+.menu-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.menu-btn.open span:nth-child(2) { opacity: 0; }
+.menu-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+.mobile-nav {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(50,8,14,0.97); backdrop-filter: blur(16px);
+  z-index: 999; flex-direction: column; align-items: center; justify-content: center;
+  padding: 80px 24px 40px;
+}
+.mobile-nav.open { display: flex; }
+.mobile-nav a { display: block; width: 100%; text-align: center; color: rgba(255,255,255,0.88);
+  text-decoration: none; font-size: 18px; font-weight: 500; padding: 16px 0;
+  border-bottom: 1px solid rgba(201,146,31,0.15); }
+.mobile-nav .mobile-cta  { margin-top: 24px; background: linear-gradient(135deg,#c9921f,#e8b84b);
+  color: #1a0d05 !important; font-weight: 700; border-radius: 30px; border-bottom: none; padding: 14px 40px; width: auto; }
+.mobile-nav .mobile-admin { margin-top: 12px; background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.55) !important; font-size: 13px !important; border-radius: 8px;
+  border-bottom: none; padding: 10px 28px; width: auto; letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* Trong @media (max-width: 900px): */
+/* nav { display: none; }  ← đã có sẵn */
+/* Thêm: */
+.menu-btn { display: flex; }
+```
+
+**JavaScript (trước `</script>` cuối cùng):**
+```javascript
+function toggleMobileMenu() {
+  const nav = document.getElementById('mobileNav');
+  const btn = document.getElementById('menuBtn');
+  nav.classList.toggle('open');
+  btn.classList.toggle('open');
+  document.body.style.overflow = nav.classList.contains('open') ? 'hidden' : '';
+}
+function closeMobileMenu() {
+  document.getElementById('mobileNav').classList.remove('open');
+  document.getElementById('menuBtn').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('mobileNav').addEventListener('click', function(e) {
+  if (e.target === this) closeMobileMenu();
+});
+```
+
+> **Lưu ý quan trọng:**
+> - Link dùng `/thanh-toan` và `/admin` (dấu `/` xuôi, KHÔNG dùng `\`)
+> - Admin panel (`admin.html`) cũng cần test trên mobile — font 16px và button lớn đã đủ dùng trên điện thoại
+
+---
+
 ## ⚡ LỖI THƯỜNG GẶP & FIX
 
 | Lỗi | Nguyên nhân | Fix |
@@ -430,6 +516,8 @@ Tất cả routes lịch lễ đều requireAdmin.
 | Cột address không có | Bảng customers cũ chưa có cột | Thêm migration: `try { db.exec("ALTER TABLE customers ADD COLUMN address TEXT") } catch(e) {}` |
 | Modal mở bị trống khi edit | openModal() → clearForm() xóa data | Mở modal bằng classList.add('open') trực tiếp |
 | GET /api/customers ai cũng xem được | Thiếu requireAdmin | Thêm requireAdmin middleware |
+| Nav/Admin button ẩn trên mobile | `nav { display:none }` ẩn toàn bộ | Thêm hamburger menu (xem section 📱 Mobile) |
+| Link `/admin` không mở được | Dùng `\admin` (backslash) thay `/admin` | Sửa thành `/admin` (forward slash) |
 | Cookie auth fail sau đổi pass | Token cũ vẫn hợp lệ | Clear cookie sau khi đổi pass |
 | Railway không detect start | Thiếu script start | Thêm `"start":"node server.js"` vào package.json |
 
@@ -447,6 +535,7 @@ Tất cả routes lịch lễ đều requireAdmin.
 □ Add custom domain trên Railway (cả www và non-www)
 □ Cấu hình DNS 123host (A record + CNAME www)
 □ Verify domain Resend (DKIM + MX + SPF) — đừng copy "TTL Auto"
+□ Test trên điện thoại: hamburger menu mở/đóng đúng, nút Admin và Công đức hiển thị
 □ Test thêm phật tử thủ công → chỉ admin được
 □ Test đặt nghi lễ public → phật tử auto-tạo đủ name/phone/email/address
 □ Test thanh toán QR → check Sepay webhook
