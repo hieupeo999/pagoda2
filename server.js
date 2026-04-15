@@ -513,8 +513,8 @@ app.get('/api/customers/check', (req, res) => {
   res.json(row ? { exists: true, id: row.id, name: row.name } : { exists: false });
 });
 
-// POST: tạo mới (từ trang công đức — public)
-app.post('/api/customers', async (req, res) => {
+// POST: tạo mới thủ công (admin only) — auto-add qua /api/orders
+app.post('/api/customers', requireAdmin, async (req, res) => {
   const { name, phone, zalo, email, address } = req.body;
   if (!name) return res.status(400).json({ error: 'Thiếu tên' });
 
@@ -596,7 +596,8 @@ app.get('/api/orders/export', (req, res) => {
 });
 
 app.post('/api/orders', async (req, res) => {
-  const { customer_name, customer_phone, product_id, product_name, amount, note } = req.body;
+  const { customer_name, customer_phone, customer_email: reqEmail, customer_address,
+          product_id, product_name, amount, note } = req.body;
   if (!customer_name || !amount) return res.status(400).json({ error: 'Thiếu thông tin' });
 
   const order_code = 'DK' + Date.now().toString().slice(-8);
@@ -608,9 +609,17 @@ app.post('/api/orders', async (req, res) => {
     if (ex) {
       customer_id = ex.id;
       customer_email = ex.email;
+      // Cập nhật email/address nếu phật tử chưa có
+      if (!ex.email && reqEmail) {
+        db.prepare('UPDATE customers SET email=? WHERE id=?').run(reqEmail, customer_id);
+        customer_email = reqEmail;
+      }
     } else {
-      const r = db.prepare('INSERT INTO customers (name,phone) VALUES (?,?)').run(customer_name, customer_phone);
+      // Auto-tạo phật tử mới khi đặt nghi lễ/công đức
+      const r = db.prepare('INSERT INTO customers (name,phone,email,address) VALUES (?,?,?,?)')
+        .run(customer_name, customer_phone, reqEmail||'', customer_address||'');
       customer_id = r.lastInsertRowid;
+      customer_email = reqEmail || null;
     }
   }
 
