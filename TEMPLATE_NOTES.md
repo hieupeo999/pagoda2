@@ -122,21 +122,45 @@ try { db.exec("ALTER TABLE customers ADD COLUMN address TEXT"); } catch(e) {}
 
 ## ADMIN AUTH
 
+> ⚠️ **TUYỆT ĐỐI KHÔNG hardcode mật khẩu/email thật vào code** — GitHub là public, ai cũng đọc được.
+> Mọi thông tin bí mật phải để trong Railway env vars.
+
 ```javascript
-const ADMIN_USER = 'admindchua';         // ← đổi cho mỗi chùa
-const ADMIN_DEFAULT_PASS = 'password123'; // ← đổi ngay sau deploy
+// ✅ ĐÚNG — đọc từ env vars, không có giá trị thật trong code
+const ADMIN_USER         = process.env.ADMIN_USER  || 'admindchua';
+const ADMIN_DEFAULT_PASS = process.env.ADMIN_PASS  || 'doipassngay123';
+const ADMIN_EMAIL        = process.env.ADMIN_EMAIL || '';
+
+// ✅ getAdminPass — ưu tiên env var, KHÔNG để DB cũ ghi đè
+function getAdminPass() {
+  if (process.env.ADMIN_PASS) return process.env.ADMIN_PASS; // env var luôn thắng
+  const row = db.prepare("SELECT value FROM settings WHERE key='admin_pass'").get();
+  return row ? row.value : ADMIN_DEFAULT_PASS;
+}
 
 function makeToken(pass) {
   return Buffer.from(ADMIN_USER + ':' + pass + ':SALT2026').toString('base64');
 }
-function getAdminPass() {
-  return db.prepare("SELECT value FROM settings WHERE key='admin_pass'").get()?.value || ADMIN_DEFAULT_PASS;
-}
 function requireAdmin(req, res, next) {
   if (parseCookies(req).adm === makeToken(getAdminPass())) return next();
   if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Unauthorized' });
-  res.redirect('/admin/login');  // ← trả 401 JSON cho API, redirect HTML cho browser
+  res.redirect('/admin/login');
 }
+```
+
+**Tại sao phải dùng env vars?**
+- Code trên GitHub là **public** — mật khẩu hardcode = ai cũng đọc được = vào được admin
+- DB có thể lưu mật khẩu cũ từ lần deploy trước → nếu `getAdminPass()` chỉ đọc DB, env var mới set sẽ bị bỏ qua
+- Env vars trên Railway là **private**, không lộ ra ngoài dù ai xem code
+
+**Railway env vars cần set (tab Variables):**
+```
+ADMIN_USER   = admindchua
+ADMIN_PASS   = (mật khẩu mạnh, ví dụ: Chua@2026!)
+ADMIN_EMAIL  = email@gmail.com
+GMAIL_PASS   = xxxx xxxx xxxx xxxx
+RESEND_API_KEY = re_xxx
+SITE_URL     = https://domain.com.vn
 ```
 
 ---
@@ -374,6 +398,8 @@ document.getElementById('mobileNav').addEventListener('click', e => { if(e.targe
 
 | Lỗi | Nguyên nhân | Fix |
 |-----|-------------|-----|
+| Mật khẩu lộ trên GitHub | Hardcode pass/email thật vào code | Dùng `process.env.ADMIN_PASS`, set trên Railway vars |
+| Đổi ADMIN_PASS env var nhưng vẫn sai pass | `getAdminPass()` đọc DB cũ thay vì env var | Thêm `if (process.env.ADMIN_PASS) return process.env.ADMIN_PASS` làm dòng đầu tiên |
 | DKIM fail Resend | Copy "TTL Auto" vào value | Xóa, thêm lại — chỉ copy `p=MIGf...` |
 | www 404 | Railway chưa add www | Railway → Networking → Add Custom Domain → www |
 | node:sqlite not found | Node < 22 | Upgrade Node 22+ |
