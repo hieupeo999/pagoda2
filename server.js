@@ -363,7 +363,9 @@ db.exec(`
 `);
 
 // ─── ADMIN PASSWORD ────────────────────────────────────────────
+// Ưu tiên: env var ADMIN_PASS → DB → ADMIN_DEFAULT_PASS
 function getAdminPass() {
+  if (process.env.ADMIN_PASS) return process.env.ADMIN_PASS;
   const row = db.prepare("SELECT value FROM settings WHERE key='admin_pass'").get();
   return row ? row.value : ADMIN_DEFAULT_PASS;
 }
