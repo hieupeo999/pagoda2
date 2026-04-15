@@ -224,16 +224,41 @@
 
   /* ── Responsive ── */
   @media (max-width: 768px) {
-    .content { padding: 16px; }
+    .content { padding: 12px; }
     .form-row { grid-template-columns: 1fr; }
-    .stats { grid-template-columns: repeat(2, 1fr); }
-    .tab { padding: 12px 14px; font-size: 13px; }
-    td, th { padding: 10px 12px; font-size: 13px; }
+    .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat-card { padding: 14px 16px; }
+    .stat-card .value { font-size: 26px; }
+    .tab { padding: 11px 12px; font-size: 13px; gap: 4px; }
+    td, th { padding: 10px 10px; font-size: 13px; }
+    .modal { padding: 20px 16px; border-radius: 14px; }
+    .toolbar { flex-direction: column; align-items: stretch; }
+    .toolbar-left { flex-direction: column; }
+    .search-input { width: 100%; }
+    .btn { width: 100%; justify-content: center; }
+    .toolbar .btn { width: auto; }
+    .toolbar-left .btn { width: 100%; }
+    .actions { flex-wrap: nowrap; gap: 5px; }
+    .actions .btn { padding: 7px 10px; font-size: 12px; }
+    .quick-actions { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .qa-card { padding: 14px 10px; }
+    .qa-card .qa-icon { font-size: 24px; }
+    .qa-card .qa-label { font-size: 13px; }
+    .info-box { font-size: 13px; padding: 12px 14px; }
+    #toast { bottom: 16px; right: 12px; left: 12px; max-width: none; }
   }
   @media (max-width: 480px) {
-    header h1 { font-size: 16px; }
-    .header-link { font-size: 12px; padding: 5px 10px; margin-left: 6px; }
-    .stats { grid-template-columns: 1fr 1fr; }
+    header { padding: 0 14px; height: 58px; }
+    header h1 { font-size: 15px; }
+    header h1 span { font-size: 18px; }
+    .header-link { font-size: 11px; padding: 5px 8px; margin-left: 5px; }
+    .stats { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .tab-label { display: none; }  /* chỉ hiện icon trên màn hình nhỏ */
+    .tab { padding: 10px 12px; font-size: 18px; }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { min-width: 500px; }
+    .modal-footer { flex-direction: column-reverse; }
+    .modal-footer .btn { width: 100%; justify-content: center; }
   }
 </style>
 </head>
@@ -250,22 +275,22 @@
 
 <div class="tabs">
   <div class="tab active" onclick="switchTab('dashboard')" id="tab-dashboard">
-    📊 Tổng quan
+    📊 <span class="tab-label">Tổng quan</span>
   </div>
   <div class="tab" onclick="switchTab('products')" id="tab-products">
-    🙏 Nghi lễ <span id="cnt-products" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
+    🙏 <span class="tab-label">Nghi lễ</span> <span id="cnt-products" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
   </div>
   <div class="tab" onclick="switchTab('customers')" id="tab-customers">
-    👥 Phật tử <span id="cnt-customers" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
+    👥 <span class="tab-label">Phật tử</span> <span id="cnt-customers" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
   </div>
   <div class="tab" onclick="switchTab('orders')" id="tab-orders">
-    🧾 Đơn hàng <span id="cnt-orders" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
+    🧾 <span class="tab-label">Đơn hàng</span> <span id="cnt-orders" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
   </div>
   <div class="tab" onclick="switchTab('lichle')" id="tab-lichle">
-    📅 Lịch Lễ <span id="cnt-lichle" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
+    📅 <span class="tab-label">Lịch Lễ</span> <span id="cnt-lichle" style="background:rgba(255,255,255,0.2);border-radius:10px;padding:2px 7px;font-size:11px;"></span>
   </div>
   <div class="tab" onclick="switchTab('security')" id="tab-security">
-    🔒 Bảo mật
+    🔒 <span class="tab-label">Bảo mật</span>
   </div>
 </div>
 

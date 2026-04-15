@@ -7,10 +7,10 @@ const app  = express();
 const PORT = process.env.PORT || 3000;
 
 // ─── ADMIN CONFIG ─────────────────────────────────────────────
-const ADMIN_USER        = 'admindchua';
-const ADMIN_DEFAULT_PASS = '23061999';
-const ADMIN_EMAIL       = 'minhhieubg99@gmail.com';
-const GMAIL_PASS        = process.env.GMAIL_PASS || '';
+const ADMIN_USER        = process.env.ADMIN_USER  || 'admindchua';
+const ADMIN_DEFAULT_PASS = process.env.ADMIN_PASS || 'doipassngay123';
+const ADMIN_EMAIL       = process.env.ADMIN_EMAIL || '';
+const GMAIL_PASS        = process.env.GMAIL_PASS  || '';
 
 // ─── RESEND CONFIG (email tự động cho khách hàng) ─────────────
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';

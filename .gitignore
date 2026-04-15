@@ -2,3 +2,7 @@ node_modules/
 brain.db
 .env
 *.log
+
+adm_test*
+*.db-shm
+*.db-wal
