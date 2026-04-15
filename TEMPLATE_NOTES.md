@@ -22,6 +22,7 @@
 15. [Bảo mật GitHub](#15-bảo-mật-github)
 16. [Lỗi thường gặp](#16-lỗi-thường-gặp)
 17. [Checklist deploy mới](#17-checklist-deploy-mới)
+18. [SEO & Quảng bá website chùa](#18-seo--quảng-bá-website-chùa)
 
 ---
 
@@ -908,6 +909,178 @@ KIỂM TRA
 □ CSV export → mở Excel, tiếng Việt đúng
 □ Đổi RESEND_FROM domain sau khi verify (chua@domain thay vì mặc định)
 ```
+
+---
+
+## 18. SEO & Quảng bá website chùa
+
+### Tại sao cần SEO?
+Người muốn đặt nghi lễ sẽ Google "chùa [tên] [tỉnh]" — nếu không có SEO, website không hiện dù đã online.
+
+---
+
+### A. Các file SEO tự động (đã có sẵn trong code)
+
+#### robots.txt — tự động từ server.js
+```
+Địa chỉ: domain.com.vn/robots.txt
+→ Nói Google: trang nào crawl được, trang nào không
+→ Admin + API bị chặn, trang chủ + thanh-toan cho phép
+```
+
+#### sitemap.xml — tự động từ server.js
+```
+Địa chỉ: domain.com.vn/sitemap.xml
+→ Liệt kê toàn bộ trang cần Google index
+→ Dùng SITE_URL từ Railway env var
+```
+
+#### Meta tags trong index.html — PHẢI cập nhật cho mỗi chùa mới
+```html
+<!-- Copy block này vào <head> của index.html, sửa nội dung theo từng chùa -->
+<title>Chùa [Tên] – [Huyện], [Tỉnh] | Nghi lễ & Công đức trực tuyến</title>
+<meta name="description" content="Chùa [Tên] tại [địa chỉ]. Đặt nghi lễ, dâng sớ cầu an, cầu siêu, lễ bán khoán, công đức trực tuyến. Liên hệ: [SĐT].">
+<meta name="keywords" content="chùa [tên], chùa [tỉnh], cầu an, cầu siêu, lễ bán khoán, dâng sớ, công đức, phật tử [tỉnh]">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://[domain]/">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://[domain]/">
+<meta property="og:title" content="Chùa [Tên] – [Huyện], [Tỉnh]">
+<meta property="og:description" content="Đặt nghi lễ, dâng sớ cầu an, cầu siêu, công đức trực tuyến.">
+<meta property="og:image" content="https://[domain]/images/hero-1.jpg">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BuddhistTemple",
+  "name": "Chùa [Tên]",
+  "description": "[Mô tả ngắn]",
+  "url": "https://[domain]",
+  "telephone": "+84[SĐT không dấu cách]",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "[Thôn, xã]",
+    "addressLocality": "[Huyện]",
+    "addressRegion": "[Tỉnh]",
+    "addressCountry": "VN"
+  },
+  "openingHours": "Mo-Su 06:00-18:00",
+  "image": "https://[domain]/images/hero-1.jpg"
+}
+</script>
+```
+
+---
+
+### B. Google Search Console — PHẢI làm sau khi deploy (miễn phí)
+
+**Mục đích:** Đăng ký website với Google → Google bắt đầu index → hiện trên kết quả tìm kiếm.
+
+**Các bước (tự làm — cần tài khoản Google của chủ chùa):**
+```
+1. Vào: search.google.com/search-console
+2. Click "Thêm thuộc tính" → chọn "URL prefix"
+3. Nhập: https://domain-chua.com.vn
+4. Xác minh quyền sở hữu → chọn cách "HTML tag":
+   → Copy thẻ <meta name="google-site-verification" content="xxx">
+   → Paste vào <head> của index.html (trước thẻ </head>)
+   → Push lên GitHub → đợi Railway deploy
+   → Quay lại Search Console → click "Xác minh"
+5. Sau khi xác minh → vào "Sitemaps" → nhập:
+   https://domain-chua.com.vn/sitemap.xml → Submit
+6. Đợi 1-4 tuần → Google tự index
+```
+
+**Kiểm tra tiến độ:**
+```
+Search Console → "Kết quả tìm kiếm" → thấy số lượt hiển thị/click
+Search Console → "Phạm vi" → trang nào đã được index
+Google thử: site:domain-chua.com.vn → thấy kết quả = đã index
+```
+
+---
+
+### C. Google Business Profile — QUAN TRỌNG nhất cho chùa địa phương (miễn phí)
+
+**Mục đích:** Khi người dùng Google "[tên chùa]" hoặc "chùa gần đây" → hiện hộp thông tin chùa bên phải + bản đồ.
+
+**Các bước (tự làm — cần tài khoản Google của chủ chùa):**
+```
+1. Vào: business.google.com
+2. Click "Quản lý ngay" → tìm tên chùa
+3. Nếu chưa có → "Thêm doanh nghiệp của bạn"
+4. Điền:
+   - Tên: "Chùa Đại Khánh" (đúng với tên thực tế)
+   - Danh mục: "Buddhist Temple" / "Chùa Phật giáo"
+   - Địa chỉ: đầy đủ thôn/xã/huyện/tỉnh
+   - Số điện thoại: đúng với thực tế
+   - Website: https://domain-chua.com.vn
+   - Giờ mở cửa: 06:00-18:00 hàng ngày
+5. Xác minh → Google gửi bưu thiếp hoặc gọi điện
+6. Sau xác minh → thêm ảnh đẹp nhất của chùa (ít nhất 5-10 ảnh)
+```
+
+**Kết quả sau 1-2 tuần:**
+```
+Ai Google "Chùa Đại Khánh Bắc Ninh" → hiện ngay hộp thông tin chùa
+Ai Google "chùa gần tôi" ở Lương Tài → chùa hiện trên bản đồ
+Phật tử có thể để lại đánh giá 5 sao → tăng uy tín
+```
+
+---
+
+### D. Mạng xã hội — lan truyền nhanh
+
+```
+Facebook Page:
+→ Tạo Page tên "Chùa [Tên]" → đặt website vào phần Bio
+→ Đăng ảnh lễ hội, hoạt động → share vào các hội nhóm Phật tử [Tỉnh]
+→ Mỗi khi có sự kiện lớn → đăng bài và tag địa điểm
+
+Zalo Official Account:
+→ Miễn phí cho cơ sở tôn giáo
+→ Phật tử Zalo → theo dõi → nhận thông báo tự động
+
+YouTube:
+→ Quay video lễ lạt → upload → mô tả video ghi rõ tên chùa + địa chỉ
+→ Video lên top Google tìm kiếm nhanh hơn website
+```
+
+---
+
+### E. Checklist SEO sau mỗi lần deploy chùa mới
+
+```
+□ Cập nhật meta tags trong index.html (title, description, og:image, JSON-LD)
+□ Cập nhật canonical URL đúng domain
+□ Set SITE_URL đúng trên Railway → sitemap.xml tự cập nhật
+□ Kiểm tra: domain.com.vn/robots.txt → hiện text
+□ Kiểm tra: domain.com.vn/sitemap.xml → hiện XML
+□ Đăng ký Google Search Console → submit sitemap
+□ Tạo Google Business Profile → điền đầy đủ thông tin
+□ Đăng ký Bing Webmaster Tools (tương tự Google Search Console)
+□ Chia sẻ website lên Facebook Page của chùa
+□ Nhờ phật tử để lại đánh giá trên Google Business
+```
+
+---
+
+### F. Thời gian kỳ vọng
+
+| Hành động | Kết quả | Thời gian |
+|-----------|---------|-----------|
+| Deploy + sitemap.xml | Google phát hiện website | 1-7 ngày |
+| Submit Search Console | Toàn bộ trang được index | 1-4 tuần |
+| Google Business đã xác minh | Hiện bản đồ khi Google tên chùa | 1-2 tuần |
+| Nội dung phong phú + đánh giá 5 sao | Lên trang đầu Google | 2-6 tháng |
+| Facebook Page hoạt động thường xuyên | Phật tử tìm thấy qua mạng XH | Ngay lập tức |
+
+> ⚠️ **Không có shortcut lên trang đầu Google.** Các yếu tố quan trọng nhất:
+> 1. Nội dung chất lượng, đúng địa phương
+> 2. Google Business được xác minh và có đánh giá thật
+> 3. Website tải nhanh, mobile-friendly (đã đảm bảo)
+> 4. Các trang khác link đến website (phatgiao.org.vn, giacngo.vn, v.v.)
 
 ---
 

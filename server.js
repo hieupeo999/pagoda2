@@ -521,6 +521,42 @@ app.use(express.static(path.join(__dirname)));
 app.get('/',           (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/thanh-toan', (req, res) => res.sendFile(path.join(__dirname, 'thanh-toan.html')));
 
+// ─── SEO: robots.txt ──────────────────────────────────────────
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain');
+  res.send(
+`User-agent: *
+Allow: /
+Allow: /thanh-toan
+Disallow: /admin
+Disallow: /api/
+Sitemap: ${SITE_URL}/sitemap.xml`
+  );
+});
+
+// ─── SEO: sitemap.xml ─────────────────────────────────────────
+app.get('/sitemap.xml', (req, res) => {
+  const now = new Date().toISOString().split('T')[0];
+  res.type('application/xml');
+  res.send(
+`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${SITE_URL}/</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${SITE_URL}/thanh-toan</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>`
+  );
+});
+
 // ─── ADMIN LOGIN ───────────────────────────────────────────────
 app.get('/admin/login', (req, res) => res.sendFile(path.join(__dirname, 'admin-login.html')));
 
