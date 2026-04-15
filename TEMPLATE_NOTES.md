@@ -1,5 +1,6 @@
 # 📋 TEMPLE WEBSITE TEMPLATE – Hoàn chỉnh
 > Tái sử dụng cho bất kỳ trang web nhà chùa nào. Copy & thay tên chùa là xong.
+> **Đọc file này trước khi code** — giải thích mọi quyết định kỹ thuật, lỗi thường gặp, và pattern đúng.
 
 ---
 
@@ -35,7 +36,8 @@
 ```
 project/
 ├── server.js           # Toàn bộ backend: routes, DB, auth, email, âm lịch
-├── index.html          # Trang chủ (đẹp, có slider, section)
+├── temple-config.js    # Config riêng từng chùa (tên, địa chỉ, quotes, ngân hàng, giỗ tổ)
+├── index.html          # Trang chủ (slider, section giới thiệu, nghi lễ)
 ├── thanh-toan.html     # Trang công đức (form + QR payment + Sepay)
 ├── admin.html          # Admin panel (dashboard + CRUD + lịch lễ + bảo mật)
 ├── admin-login.html    # Trang đăng nhập admin
@@ -46,6 +48,9 @@ project/
 ---
 
 ## 🗄️ DATABASE SCHEMA ĐẦY ĐỦ
+
+> **QUAN TRỌNG:** `customers` bảng có cột `address TEXT` — cần để in sớ cầu an.
+> Nếu deploy lên DB cũ chưa có cột này, dùng migration bên dưới.
 
 ```javascript
 const { DatabaseSync } = require('node:sqlite');
@@ -62,13 +67,14 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now','localtime'))
   );
 
-  -- Phật tử đăng ký ONLINE (qua trang thanh-toan.html)
+  -- Phật tử (vừa online vừa admin nhập thủ công)
   CREATE TABLE IF NOT EXISTS customers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     phone TEXT,
     zalo TEXT,
     email TEXT,
+    address TEXT,                  -- ← CẦN THIẾT để in sớ cầu an
     registered_at TEXT DEFAULT (datetime('now','localtime'))
   );
 
@@ -104,47 +110,18 @@ db.exec(`
     order_code TEXT,
     amount INTEGER,
     product_name TEXT,
-    scheduled_at TEXT,      -- ISO datetime
+    scheduled_at TEXT,
     sent_at TEXT,
-    status TEXT DEFAULT 'pending'  -- pending | sent | failed
-  );
-
-  -- ══ HỆ THỐNG LỊCH LỄ (Admin quản lý thủ công) ══
-
-  -- Phật tử offline (admin nhập)
-  CREATE TABLE IF NOT EXISTS phat_tu (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ho_ten TEXT NOT NULL,
-    so_dien_thoai TEXT,
-    dia_chi TEXT,
-    created_at TEXT DEFAULT (datetime('now','localtime'))
-  );
-
-  -- Đơn công đức (admin nhập)
-  CREATE TABLE IF NOT EXISTS don_cong_duc (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    phat_tu_id INTEGER NOT NULL,
-    dich_vu TEXT,
-    noi_dung_cau_nguyen TEXT,
-    so_tien INTEGER DEFAULT 0,
-    ngay_tao TEXT DEFAULT (datetime('now','localtime'))
-  );
-
-  -- Thanh toán lễ
-  CREATE TABLE IF NOT EXISTS thanh_toan_le (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    don_id INTEGER NOT NULL,
-    trang_thai TEXT DEFAULT 'chua_chuyen',  -- chua_chuyen | da_chuyen
-    thoi_gian TEXT DEFAULT (datetime('now','localtime'))
+    status TEXT DEFAULT 'pending'
   );
 
   -- Lịch lễ
   CREATE TABLE IF NOT EXISTS lich_le (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     don_id INTEGER NOT NULL,
-    ngay_duong TEXT,                    -- YYYY-MM-DD
-    ngay_am TEXT,                       -- VD: 15/7/2026
-    trang_thai TEXT DEFAULT 'chua_hen', -- chua_hen | da_hen | da_xin_doi_lich | da_hoan_thanh
+    ngay_duong TEXT,
+    ngay_am TEXT,
+    trang_thai TEXT DEFAULT 'chua_hen',
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime'))
   );
@@ -158,6 +135,10 @@ db.exec(`
     thoi_gian_sua TEXT DEFAULT (datetime('now','localtime'))
   );
 `);
+
+// ── MIGRATION: thêm cột mới vào bảng cũ (không xóa data) ──
+// Luôn wrap bằng try/catch — lỗi nếu cột đã tồn tại là bình thường
+try { db.exec("ALTER TABLE customers ADD COLUMN address TEXT"); } catch(e) {}
 ```
 
 ---
@@ -175,51 +156,105 @@ function getAdminPass() {
   const row = db.prepare("SELECT value FROM settings WHERE key='admin_pass'").get();
   return row ? row.value : ADMIN_DEFAULT_PASS;
 }
-function setAdminPass(p) {
-  db.prepare("INSERT OR REPLACE INTO settings(key,value) VALUES('admin_pass',?)").run(p);
-}
-function parseCookies(req) {
-  const list = {};
-  (req.headers.cookie || '').split(';').forEach(c => {
-    const [k,...v] = c.split('=');
-    if (k) list[k.trim()] = decodeURIComponent(v.join('=').trim());
-  });
-  return list;
-}
 function requireAdmin(req, res, next) {
   const cookies = parseCookies(req);
   if (cookies.adm === makeToken(getAdminPass())) return next();
   if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Unauthorized' });
   res.redirect('/admin/login');
 }
+```
 
-// Login
-app.post('/admin/login', express.urlencoded({ extended: false }), (req, res) => {
-  if (req.body.username === ADMIN_USER && req.body.password === getAdminPass()) {
-    res.setHeader('Set-Cookie', `adm=${makeToken(getAdminPass())}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`);
-    return res.redirect('/admin');
+---
+
+## 🔑 PHÂN QUYỀN API PHẬT TỬ (QUAN TRỌNG)
+
+> **Quy tắc:** Chỉ admin mới thêm/sửa/xóa phật tử thủ công.
+> Auto-add khi khách đặt nghi lễ/công đức → server tự INSERT trực tiếp DB (không qua API).
+
+```
+GET    /api/customers        → requireAdmin  (xem danh sách)
+GET    /api/customers/check  → public        (check trùng SĐT trên form)
+POST   /api/customers        → requireAdmin  (thêm thủ công từ admin panel)
+PUT    /api/customers/:id    → requireAdmin  (sửa)
+DELETE /api/customers/:id    → requireAdmin  (xóa)
+```
+
+**Auto-add trong POST /api/orders (public):**
+```javascript
+app.post('/api/orders', async (req, res) => {
+  const { customer_name, customer_phone, customer_email, customer_address, ... } = req.body;
+
+  if (customer_phone) {
+    const ex = db.prepare('SELECT id, email FROM customers WHERE phone=?').get(customer_phone);
+    if (ex) {
+      customer_id = ex.id;
+      // Cập nhật email nếu chưa có
+      if (!ex.email && customer_email) {
+        db.prepare('UPDATE customers SET email=? WHERE id=?').run(customer_email, customer_id);
+      }
+    } else {
+      // ← INSERT trực tiếp, KHÔNG gọi POST /api/customers
+      const r = db.prepare('INSERT INTO customers (name,phone,email,address) VALUES (?,?,?,?)')
+        .run(customer_name, customer_phone, customer_email||'', customer_address||'');
+      customer_id = r.lastInsertRowid;
+    }
   }
-  res.redirect('/admin/login?err=1');
-});
-
-// Logout
-app.get('/admin/logout', (req, res) => {
-  res.setHeader('Set-Cookie', 'adm=; HttpOnly; Path=/; Max-Age=0');
-  res.redirect('/admin/login');
+  // ... tạo order
 });
 ```
 
 ---
 
-## 📧 RESEND EMAIL (tự động chăm sóc khách hàng)
+## ⚙️ TEMPLE-CONFIG.JS (1 file thay đổi nội dung toàn bộ chùa)
+
+> Mỗi chùa có 1 file `temple-config.js` riêng. Không cần sửa server.js hay HTML.
 
 ```javascript
-// Config
-const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-const RESEND_FROM    = 'Chùa Tên <chua@domain.com.vn>';  // Sau khi verify domain
-const SITE_URL       = process.env.SITE_URL || 'https://domain.com.vn';
+// temple-config.js — Các section quan trọng:
+const TEMPLE = {
+  name: 'Chùa Đại Khánh',
+  shortName: 'Đại Khánh',
+  location: 'Thôn Trừng Xá, xã Trung Chính, tỉnh Bắc Ninh',
+  phone: '0974 556 898',
+  email: 'chuadaikhanh@gmail.com',
 
-// Gửi email
+  // Giỗ tổ — ngày lễ lớn nhất, cố định theo âm lịch
+  gioTo: {
+    ngayAm: 15, thangAm: 1,
+    ten: 'Lễ Giỗ Tổ Chùa Đại Khánh',
+    soNgay: 3,
+    nhacTruocNgay: 7,   // Server tự gửi email nhắc trước 7 ngày
+  },
+
+  // Các ngày lễ Phật giáo trong năm
+  ngayLe: [
+    { ten: 'Phật Đản',   ngayAm: 15, thangAm: 4 },
+    { ten: 'Lễ Vu Lan',  ngayAm: 15, thangAm: 7 },
+    { ten: 'Giỗ Tổ',     ngayAm: 15, thangAm: 1, isGioTo: true },
+  ],
+
+  bank: {
+    primary:   { name:'VietinBank', accountNumber:'xxx', accountName:'NGUYEN VAN A' },
+    secondary: { name:'Agribank',   accountNumber:'xxx', accountName:'NGUYEN THI B' },
+  },
+
+  system: { domain: 'chuadaikhanh-trungchinh-bn.com.vn' }
+};
+
+if (typeof module !== 'undefined') module.exports = TEMPLE;
+```
+
+> **Dùng trong server.js:** `const TEMPLE = require('./temple-config');`
+> **Dùng trong HTML:** `<script src="/temple-config.js"></script>` rồi dùng `TEMPLE.name` v.v.
+
+---
+
+## 📧 RESEND EMAIL
+
+```javascript
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const RESEND_FROM    = 'Chùa Tên <chua@domain.com.vn>';
+
 async function sendResendEmail(to, subject, html) {
   if (!RESEND_API_KEY || !to?.includes('@')) return false;
   const res = await fetch('https://api.resend.com/emails', {
@@ -229,73 +264,28 @@ async function sendResendEmail(to, subject, html) {
   });
   return res.ok;
 }
-
-// Lên lịch email
-function scheduleEmail(customerId, name, email, type, delayDays=0, extra={}) {
-  if (!email?.includes('@')) return;
-  const scheduledAt = new Date(Date.now() + delayDays*86400000).toISOString();
-  db.prepare(`INSERT INTO email_queue (customer_id,customer_name,customer_email,email_type,order_code,amount,product_name,scheduled_at) VALUES (?,?,?,?,?,?,?,?)`)
-    .run(customerId, name, email, type, extra.orderCode||null, extra.amount||null, extra.productName||null, scheduledAt);
-}
-
-// Xử lý hàng đợi (mỗi 30 phút)
-async function processEmailQueue() {
-  const now = new Date().toISOString();
-  const pending = db.prepare(`SELECT * FROM email_queue WHERE status='pending' AND scheduled_at<=? LIMIT 20`).all(now);
-  for (const item of pending) {
-    let tpl;
-    if (item.email_type==='welcome') tpl=EMAIL_TEMPLATES.welcome(item.customer_name);
-    else if (item.email_type==='value') tpl=EMAIL_TEMPLATES.value(item.customer_name);
-    else if (item.email_type==='invite') tpl=EMAIL_TEMPLATES.invite(item.customer_name);
-    else if (item.email_type==='confirm') tpl=EMAIL_TEMPLATES.confirm(item.customer_name,item.order_code,item.product_name,item.amount);
-    const ok = tpl ? await sendResendEmail(item.customer_email, tpl.subject, tpl.html) : false;
-    db.prepare(`UPDATE email_queue SET status=?,sent_at=datetime('now') WHERE id=?`).run(ok?'sent':'failed',item.id);
-  }
-}
-setTimeout(()=>processEmailQueue(), 5000);
-setInterval(()=>processEmailQueue(), 30*60*1000);
-
-// TRIGGERS (gắn vào các route):
-// Khách đăng ký → welcome ngay, value sau 2 ngày, invite sau 3 ngày
-scheduleEmail(id, name, email, 'welcome', 0);
-scheduleEmail(id, name, email, 'value',   2);
-scheduleEmail(id, name, email, 'invite',  3);
-
-// Đơn thành công → confirm ngay
-scheduleEmail(customerId, name, email, 'confirm', 0, { orderCode, productName, amount });
 ```
 
-> **Resend DNS cần verify (123host):**
+> **Resend DNS (123host):**
 > | Record | Tên | Loại | Giá trị |
 > |--------|-----|------|---------|
-> | DKIM | `resend._domainkey` | TXT | `p=MIGf...` (lấy từ Resend dashboard) |
-> | MX | `send` | MX | `feedback-smtp.ap-northeast-1.amazonses.com` Priority: 10 |
+> | DKIM | `resend._domainkey` | TXT | `p=MIGf...` (lấy từ Resend dashboard, **KHÔNG copy "TTL Auto"**) |
+> | MX | `send` | MX | `feedback-smtp.ap-northeast-1.amazonses.com` Priority: **10** |
 > | SPF | `send` | TXT | `v=spf1 include:amazonses.com ~all` |
 
 ---
 
-## 🗓️ ÂM LỊCH (Ho Ngoc Duc Algorithm)
+## 🗓️ ÂM LỊCH (Ho Ngoc Duc)
 
 ```javascript
-// Paste nguyên hàm này vào server.js, không cần thư viện ngoài
-function solar2Lunar(dd, mm, yy) {
-  const tz=7;
-  // [Paste full algorithm from chuaDK/server.js – hàm ll_jdFromDate, ll_newMoon, ll_sunLong, ll_month11, ll_leapOffset, solar2Lunar]
-  // Trả về: { ngayAm, thangAm, namAm, nhuan }
-}
-function formatLunar(dd, mm, yy) {
-  try {
-    const {ngayAm,thangAm,namAm,nhuan} = solar2Lunar(dd,mm,yy);
-    return `${ngayAm}/${thangAm}${nhuan?' (nhuận)':''}/${namAm}`;
-  } catch(e) { return ''; }
-}
+// Paste full algorithm từ server.js của chuaDK — hàm: ll_jdFromDate, ll_newMoon,
+// ll_sunLong, ll_month11, ll_leapOffset, solar2Lunar, formatLunar
+// Không cần thư viện ngoài, chạy thuần server-side Node.js
 
-// API endpoint
-app.get('/api/lunar', requireAdmin, (req,res) => {
-  const {dd,mm,yy} = req.query;
-  const r = solar2Lunar(parseInt(dd),parseInt(mm),parseInt(yy));
-  r.formatted = formatLunar(parseInt(dd),parseInt(mm),parseInt(yy));
-  res.json(r);
+app.get('/api/lunar', requireAdmin, (req, res) => {
+  const { dd, mm, yy } = req.query;
+  const r = solar2Lunar(+dd, +mm, +yy);
+  res.json({ ...r, formatted: formatLunar(+dd, +mm, +yy) });
 });
 ```
 
@@ -304,25 +294,19 @@ app.get('/api/lunar', requireAdmin, (req,res) => {
 ## 💳 PAYMENT PATTERN
 
 ```javascript
-// Config ngân hàng
-const BANK = {
-  vietinbank: { bankId:'vietinbank', accountNumber:'xxx', accountName:'NGUYEN VAN A' },
-  agribank:   { bankId:'agribank',   accountNumber:'xxx', accountName:'NGUYEN THI B', description:'Trụ trì' },
-};
+// VietQR
+const qrUrl = `https://img.vietqr.io/image/${bankId}-${accountNumber}-compact2.png`
+            + `?amount=${amount}&addInfo=${encodeURIComponent('SEVQR '+orderCode)}`;
 
-// VietQR URL
-const qrUrl = `https://img.vietqr.io/image/${bankId}-${accountNumber}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent('SEVQR '+orderCode)}&accountName=${accountName}`;
-
-// Webhook Sepay (auto match)
+// Webhook Sepay (auto-confirm)
 app.post('/webhook/sepay', async (req, res) => {
   if (req.body.transferType !== 'in') return res.json({ success: true });
   const content = (req.body.content || '').toUpperCase();
   const amount  = Number(req.body.transferAmount) || 0;
-  const orders  = db.prepare("SELECT * FROM orders WHERE status='pending' ORDER BY created_at DESC").all();
-  const order   = orders.find(o => content.includes(o.order_code.toUpperCase()) && amount >= o.amount);
+  const order   = db.prepare("SELECT * FROM orders WHERE status='pending' ORDER BY created_at DESC")
+    .all().find(o => content.includes(o.order_code.toUpperCase()) && amount >= o.amount);
   if (order) {
     db.prepare("UPDATE orders SET status='success', paid_at=datetime('now') WHERE id=?").run(order.id);
-    // → scheduleEmail confirm
   }
   res.json({ success: true });
 });
@@ -330,68 +314,89 @@ app.post('/webhook/sepay', async (req, res) => {
 
 ---
 
-## 🎨 DESIGN TOKENS (màu chùa)
+## 🎨 DESIGN TOKENS
 
 ```css
 :root {
-  --crimson:      #7a0c1e;   /* đỏ chính */
-  --crimson-dark: #500a14;   /* đỏ đậm */
-  --gold:         #c9921f;   /* vàng chính */
-  --gold-light:   #e8b84b;   /* vàng sáng */
-  --cream:        #faf5ea;   /* nền kem */
-  --ink:          #1a0d05;   /* chữ đậm */
-  --border:       #e5d8c0;   /* viền */
+  --crimson: #7a0c1e; --crimson-dark: #500a14;
+  --gold: #c9921f;    --gold-light: #e8b84b;
+  --cream: #faf5ea;   --ink: #1a0d05;  --border: #e5d8c0;
 }
 /* Font: Cormorant Garamond (tiêu đề) + Be Vietnam Pro (body) */
-/* Google Fonts: ?family=Cormorant+Garamond:wght@300;400;600&family=Be+Vietnam+Pro:wght@300;400;500;600 */
 ```
 
 ---
 
-## 📊 ADMIN UI PATTERN (người cao tuổi – dễ dùng)
+## 📊 ADMIN UI – PATTERN ĐÚNG (người cao tuổi)
 
 ```
-Nguyên tắc thiết kế:
-• Font: 16px base, 15px bảng, 20px header, 32px stat-card
-• Button: padding 11px 22px, font-size 15px, border-radius 10px, font-weight 600
-• Input: padding 12px 16px, border 2px, font-size 15px
-• Khoảng cách: gap 16-28px, margin-bottom 18-28px
-• Màu sắc: contrast cao, badge màu rõ ràng
-• Info box hướng dẫn ở đầu mỗi tab (màu vàng nhạt)
-• Quick-action cards trên dashboard
-• Toast notification to, rõ (font-size 15px, font-weight 600)
+Font: 16px base, 15px bảng, 20px header, 32px stat-card
+Button: padding 11px 22px, font-size 15px, border-radius 10px
+Input: padding 12px 16px, border 2px, font-size 15px
+Info box hướng dẫn màu vàng nhạt ở đầu mỗi tab
+Toast notification to rõ (15px, font-weight 600)
+```
+
+### setBtnLoading — LUÔN dùng khi fetch
+
+```javascript
+// Định nghĩa 1 lần, dùng cho mọi nút action
+function setBtnLoading(btn, loading) {
+  if (!btn) return;
+  if (loading) { btn._origText = btn.textContent; btn.disabled = true; btn.textContent = '⏳ Đang xử lý...'; }
+  else         { btn.disabled = false; btn.textContent = btn._origText || btn.textContent; }
+}
+
+// Pattern dùng trong mọi saveXxx / deleteXxx:
+async function saveProduct() {
+  const btn = document.querySelector('#modal-product .btn-primary');
+  setBtnLoading(btn, true);
+  try {
+    const res = await fetch(url, { method, headers, body });
+    const data = await res.json();
+    if (data.error) { toast('❌ ' + data.error, 'error'); return; }
+    closeModal('product');
+    await loadProducts();          // ← await để bảng cập nhật xong mới hiện toast
+    toast('✅ Đã lưu', 'success');
+  } catch(e) { toast('❌ Lỗi kết nối', 'error'); }
+  finally { setBtnLoading(btn, false); }
+}
+
+// Reload nhiều section song song:
+await Promise.all([loadOrders(), loadDashboard()]);
+```
+
+### Modal Edit Bug — QUAN TRỌNG
+
+> **Vấn đề:** `openModal('product')` gọi `clearForm()` → xóa data vừa set bởi `editProduct()`.
+> **Fix:** Trong hàm editXxx(), **KHÔNG** gọi `openModal()` — mở modal trực tiếp:
+
+```javascript
+function editProduct(id) {
+  const p = productsData.find(x => x.id === id);
+  // Set các field trước
+  document.getElementById('product-name').value = p.name || '';
+  document.getElementById('product-price').value = p.price ?? 0;
+  document.getElementById('product-description').value = p.description || '';
+  document.getElementById('modal-product-title').textContent = '✏️ Sửa nghi lễ';
+  // Mở modal TRỰC TIẾP — không qua openModal() để tránh clearForm reset data
+  document.getElementById('modal-product').classList.add('open');
+}
 ```
 
 ---
 
-## 📅 LỊCH LỄ PATTERN (Admin-only)
+## 📅 LỊCH LỄ PATTERN
 
 ```
-Luồng:
-1. Admin thêm phật tử → tạo đơn công đức → chọn ngày (dương) → hiện ngày âm
-2. Checkbox bắt buộc "Đã kiểm tra ngày âm" mới cho lưu
-3. Trạng thái: chua_hen → da_hen → (da_xin_doi_lich) → da_hoan_thanh
-4. Mọi lần sửa ngày → lưu vào bảng lich_su_sua
-5. Calendar tháng: màu theo trạng thái
-6. Copy 1 click: 1 người / theo nhóm / toàn bộ danh sách
+Luồng quản lý:
+1. Admin thêm phật tử → tạo đơn công đức → chọn ngày dương → server convert âm lịch
+2. Checkbox "Đã kiểm tra ngày âm" bắt buộc trước khi lưu
+3. Trạng thái: chua_hen → da_hen → da_hoan_thanh (hoặc da_xin_doi_lich)
+4. Mọi lần sửa ngày → lưu vào lich_su_sua
+5. Calendar tháng hiển thị màu theo trạng thái
 
-API routes cần: (tất cả requireAdmin)
-GET  /api/phat-tu             – danh sách
-POST /api/phat-tu             – thêm mới
-GET  /api/phat-tu/tim-kiem    – tìm kiếm
-GET  /api/don-cong-duc        – danh sách đơn (filter by trang_thai)
-POST /api/don-cong-duc        – tạo đơn
-POST /api/don-cong-duc/:id/dat-lich     – đặt lịch lần đầu
-PUT  /api/lich-le/:id                   – sửa lịch (auto thêm vào lich_su_sua)
-POST /api/lich-le/:id/hoan-thanh        – đánh dấu hoàn thành
-POST /api/don-cong-duc/:id/thanh-toan   – cập nhật trạng thái tiền
-GET  /api/lich-le/calendar?month&year   – lịch tháng
-GET  /api/lich-le/stats                 – stats
-GET  /api/copy-don/:id                  – copy 1 người
-GET  /api/copy-nhom/:trang_thai         – copy nhóm
-GET  /api/copy-tat-ca                   – copy tất cả
-GET  /api/lich-su-sua/:don_id           – lịch sử sửa
-GET  /api/lunar?dd&mm&yy                – convert âm lịch
+Tất cả routes lịch lễ đều requireAdmin.
 ```
 
 ---
@@ -399,17 +404,16 @@ GET  /api/lunar?dd&mm&yy                – convert âm lịch
 ## 🚀 RAILWAY DEPLOY
 
 ```
-1. Tạo GitHub repo → push code
-2. Railway → New Project → Deploy from GitHub
-3. Biến môi trường Railway cần:
-   - RESEND_API_KEY = re_xxx...  (lấy từ resend.com)
-   - GMAIL_PASS     = xxxx xxxx xxxx xxxx  (Gmail App Password 16 ký tự)
-   - SITE_URL       = https://domain.com.vn
-4. Custom domain: Settings → Networking → Add Custom Domain
-5. DNS 123host:
-   - A record @ → Railway IP (ví dụ: 151.101.2.15)
-   - CNAME www → xxx.up.railway.app
-   - TXT _railway-verify → railway-verify=xxx
+1. Push GitHub → Railway auto-detect và deploy
+2. Biến môi trường cần set:
+   RESEND_API_KEY = re_xxx...
+   GMAIL_PASS     = xxxx xxxx xxxx xxxx  (App Password 16 ký tự)
+   SITE_URL       = https://domain.com.vn
+3. Custom domain: Settings → Networking → Add Custom Domain
+   - www subdomain phải thêm riêng vào Railway (không tự nhận)
+4. DNS 123host:
+   A record @ → Railway IP
+   CNAME www  → xxx.up.railway.app
 ```
 
 ---
@@ -419,12 +423,14 @@ GET  /api/lunar?dd&mm&yy                – convert âm lịch
 | Lỗi | Nguyên nhân | Fix |
 |-----|-------------|-----|
 | DKIM failed Resend | Copy nhầm "TTL Auto" vào content | Xóa record, thêm lại đúng value |
-| DNS không propagate | CNAME @ bị từ chối | Dùng A record thay vì CNAME |
-| MX record lỗi priority | Không điền Priority field | Điền `10` vào ô Priority riêng |
-| Cookie auth fail sau đổi pass | Token cũ vẫn valid | Clear cookie sau khi đổi pass |
-| Gmail không gửi | Chưa set GMAIL_PASS | Set App Password Railway Variables |
-| Modal đóng khi click ngoài | onclick trên overlay | Xóa onclick, dùng addEventListener |
-| node:sqlite không tồn tại | Node < 22 | Upgrade Node lên 22+ |
+| www domain 404 | Railway chưa add www subdomain | Vào Railway → Networking → Add Custom Domain → thêm www |
+| node:sqlite not found | Node < 22 | Upgrade Node lên 22+ |
+| Sửa nghi lễ (Sửa button) không làm gì | editProduct() gọi element không tồn tại → JS crash | Xóa dòng getElementById sai, mở modal trực tiếp |
+| Sau thêm/sửa/xóa phải F5 | loadXxx() không có await | Dùng `await loadXxx()` + setBtnLoading |
+| Cột address không có | Bảng customers cũ chưa có cột | Thêm migration: `try { db.exec("ALTER TABLE customers ADD COLUMN address TEXT") } catch(e) {}` |
+| Modal mở bị trống khi edit | openModal() → clearForm() xóa data | Mở modal bằng classList.add('open') trực tiếp |
+| GET /api/customers ai cũng xem được | Thiếu requireAdmin | Thêm requireAdmin middleware |
+| Cookie auth fail sau đổi pass | Token cũ vẫn hợp lệ | Clear cookie sau khi đổi pass |
 | Railway không detect start | Thiếu script start | Thêm `"start":"node server.js"` vào package.json |
 
 ---
@@ -432,17 +438,18 @@ GET  /api/lunar?dd&mm&yy                – convert âm lịch
 ## 📝 CHECKLIST DEPLOY MỚI
 
 ```
+□ Sửa temple-config.js: tên chùa, địa chỉ, SĐT, ngân hàng, giỗ tổ
 □ Thay ADMIN_USER, ADMIN_DEFAULT_PASS trong server.js
-□ Thay tên chùa, địa chỉ, SĐT trong tất cả file HTML
-□ Thay thông tin ngân hàng (SEPAY_CONFIG, AGRIBANK_CONFIG)
-□ Thay ADMIN_EMAIL trong server.js
+□ Kiểm tra migration address đã có trong server.js
 □ Push lên GitHub
 □ Tạo Railway project → link GitHub
 □ Set biến môi trường: RESEND_API_KEY, GMAIL_PASS, SITE_URL
-□ Add custom domain trên Railway
-□ Cấu hình DNS trên 123host (A record + CNAME www + _railway-verify)
-□ Verify domain Resend (DKIM + MX + SPF)
-□ Test thanh toán QR → check webhook
+□ Add custom domain trên Railway (cả www và non-www)
+□ Cấu hình DNS 123host (A record + CNAME www)
+□ Verify domain Resend (DKIM + MX + SPF) — đừng copy "TTL Auto"
+□ Test thêm phật tử thủ công → chỉ admin được
+□ Test đặt nghi lễ public → phật tử auto-tạo đủ name/phone/email/address
+□ Test thanh toán QR → check Sepay webhook
 □ Test email automation → thêm customer có email
-□ Đổi RESEND_FROM từ onboarding@resend.dev → chua@domain.com.vn sau khi verify
+□ Đổi RESEND_FROM sang chua@domain sau khi verify domain
 ```
