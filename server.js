@@ -2,6 +2,10 @@ const express  = require('express');
 const { DatabaseSync } = require('node:sqlite');
 const path      = require('path');
 const nodemailer = require('nodemailer');
+const crypto     = require('crypto');
+
+// ─── TEMPLE CONFIG (sửa temple-config.js cho mỗi chùa mới) ───
+const TEMPLE = require('./temple-config');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -14,8 +18,8 @@ const GMAIL_PASS        = process.env.GMAIL_PASS  || '';
 
 // ─── RESEND CONFIG (email tự động cho khách hàng) ─────────────
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-const RESEND_FROM    = 'Chùa Đại Khánh <chua@chuadaikhanh-trungchinh-bn.com.vn>';
-const SITE_URL       = process.env.SITE_URL || 'https://chuadaikhanh-trungchinh-bn.com.vn';
+const SITE_URL       = process.env.SITE_URL || `https://${TEMPLE.system.domain}`;
+const RESEND_FROM    = `${TEMPLE.name} <chua@${TEMPLE.system.domain}>`;
 
 // ─── COOKIE HELPERS ───────────────────────────────────────────
 function parseCookies(req) {
@@ -51,7 +55,7 @@ async function sendMail(to, subject, html) {
     service: 'gmail',
     auth: { user: ADMIN_EMAIL, pass: GMAIL_PASS }
   });
-  await transporter.sendMail({ from: `"Chùa Đại Khánh" <${ADMIN_EMAIL}>`, to, subject, html });
+  await transporter.sendMail({ from: `"${TEMPLE.name}" <${ADMIN_EMAIL}>`, to, subject, html });
   return true;
 }
 
@@ -99,13 +103,13 @@ function emailBase(content) {
 </style></head><body>
 <div class="wrap">
   <div class="header">
-    <h1>🏛️ Chùa Đại Khánh</h1>
+    <h1>${TEMPLE.emoji} ${TEMPLE.name}</h1>
     <p>Nam Mô A Di Đà Phật 🪷</p>
   </div>
   <div class="body">${content}</div>
   <div class="footer">
     <p>🪷 Nam Mô A Di Đà Phật 🪷</p>
-    <p>Chùa Đại Khánh – Trung Chính, Bắc Ninh</p>
+    <p>${TEMPLE.name} – ${TEMPLE.location}</p>
     <p style="margin-top:8px"><a href="${SITE_URL}" style="color:#7a0c1e">Xem trang web</a></p>
   </div>
 </div></body></html>`;
@@ -114,12 +118,12 @@ function emailBase(content) {
 const EMAIL_TEMPLATES = {
   // Email 1: Chào mừng (gửi ngay)
   welcome: (name) => ({
-    subject: '🪷 Chào mừng bạn đến với Chùa Đại Khánh',
+    subject: `🪷 Chào mừng bạn đến với ${TEMPLE.name}`,
     html: emailBase(`
       <h2>Kính chào Phật tử ${name},</h2>
-      <p>Chùa Đại Khánh trân trọng cảm ơn bạn đã quan tâm và tin tưởng. Đây là bước đầu tiên trên hành trình kết nối tâm linh cùng chúng tôi.</p>
+      <p>${TEMPLE.name} trân trọng cảm ơn bạn đã quan tâm và tin tưởng. Đây là bước đầu tiên trên hành trình kết nối tâm linh cùng chúng tôi.</p>
       <div class="box">
-        <p>🙏 <strong>Tại Chùa Đại Khánh, chúng tôi cung cấp:</strong></p>
+        <p>🙏 <strong>Tại ${TEMPLE.name}, chúng tôi cung cấp:</strong></p>
         <p>• Dâng sớ cầu an cho gia đình, người thân<br>
            • Làm lễ cầu siêu cho hương linh người đã khuất<br>
            • Lễ bán khoán cầu bình an cho trẻ em<br>
@@ -136,7 +140,7 @@ const EMAIL_TEMPLATES = {
 
   // Email 2: Giá trị (2 ngày sau)
   value: (name) => ({
-    subject: '🙏 Ý nghĩa của việc dâng sớ cầu an – Chùa Đại Khánh',
+    subject: `🙏 Ý nghĩa của việc dâng sớ cầu an – ${TEMPLE.name}`,
     html: emailBase(`
       <h2>Kính Phật tử ${name},</h2>
       <p>Nhiều người hỏi chúng tôi: <em>"Dâng sớ cầu an có ý nghĩa gì?"</em> — Hôm nay chúng tôi muốn chia sẻ điều này với bạn.</p>
@@ -151,7 +155,7 @@ const EMAIL_TEMPLATES = {
            2. <strong>Tăng phước báu</strong> – gia đình bình an, con cái học hành tốt<br>
            3. <strong>Tâm an định</strong> – giảm lo lắng, sống thanh thản hơn</p>
       </div>
-      <p>Nhiều Phật tử sau khi làm lễ cầu an tại Chùa Đại Khánh đã chia sẻ cảm nhận về sự bình yên trong tâm hồn và những chuyển biến tích cực trong cuộc sống.</p>
+      <p>Nhiều Phật tử sau khi làm lễ cầu an tại ${TEMPLE.name} đã chia sẻ cảm nhận về sự bình yên trong tâm hồn và những chuyển biến tích cực trong cuộc sống.</p>
       <p>🌸 Nếu bạn đang trải qua giai đoạn khó khăn hoặc muốn cầu nguyện cho gia đình, chúng tôi luôn sẵn lòng hỗ trợ.</p>
       <p>Kính chúc Phật tử thân tâm thường lạc! 🪷</p>
     `)
@@ -159,10 +163,10 @@ const EMAIL_TEMPLATES = {
 
   // Email 3: Mời đăng ký (3 ngày sau)
   invite: (name) => ({
-    subject: '✨ Đăng ký nghi lễ tại Chùa Đại Khánh – Còn chỗ nhận sớ tháng này',
+    subject: `✨ Đăng ký nghi lễ tại ${TEMPLE.name} – Còn chỗ nhận sớ tháng này`,
     html: emailBase(`
       <h2>Kính Phật tử ${name},</h2>
-      <p>Tháng này Chùa Đại Khánh vẫn đang nhận đăng ký các nghi lễ. Nếu bạn đang có tâm nguyện muốn cầu an, cầu siêu hay làm lễ cho gia đình — đây là thời điểm thích hợp.</p>
+      <p>Tháng này ${TEMPLE.name} vẫn đang nhận đăng ký các nghi lễ. Nếu bạn đang có tâm nguyện muốn cầu an, cầu siêu hay làm lễ cho gia đình — đây là thời điểm thích hợp.</p>
       <div class="box">
         <p>🙏 <strong>Các nghi lễ hiện đang nhận đăng ký:</strong></p>
         <p>• 🌸 <strong>Dâng sớ cầu an</strong> – Cầu gia đình bình an, công việc thuận lợi<br>
@@ -186,7 +190,7 @@ const EMAIL_TEMPLATES = {
     html: emailBase(`
       <h2>Nam Mô A Di Đà Phật! 🙏</h2>
       <p>Kính chào Phật tử <strong>${name}</strong>,</p>
-      <p>Chùa Đại Khánh đã nhận được tấm lòng công đức của bạn. Chúng tôi thành tâm cảm ơn và ghi nhận tâm nguyện của Phật tử.</p>
+      <p>${TEMPLE.name} đã nhận được tấm lòng công đức của bạn. Chúng tôi thành tâm cảm ơn và ghi nhận tâm nguyện của Phật tử.</p>
       <div class="box">
         <p>📋 <strong>Chi tiết công đức:</strong></p>
         <p>• Mã đơn: <strong style="color:#7a0c1e">${orderCode}</strong><br>
@@ -194,7 +198,7 @@ const EMAIL_TEMPLATES = {
            • Số tiền: <strong class="gold">${amount ? Number(amount).toLocaleString('vi-VN') + 'đ' : 'Tùy tâm'}</strong><br>
            • Trạng thái: <strong style="color:#166534">✅ Đã xác nhận</strong></p>
       </div>
-      <p>🕯️ Chùa Đại Khánh sẽ thành tâm thực hiện nghi lễ và hồi hướng công đức đến Phật tử và gia đình. Cầu cho gia đình bạn <span class="gold">phước lành viên mãn, thân tâm an lạc</span>.</p>
+      <p>🕯️ ${TEMPLE.name} sẽ thành tâm thực hiện nghi lễ và hồi hướng công đức đến Phật tử và gia đình. Cầu cho gia đình bạn <span class="gold">phước lành viên mãn, thân tâm an lạc</span>.</p>
       <div class="box">
         <p>🙏 <em>"Công đức vô lượng vô biên, hồi hướng pháp giới chúng sinh, đồng nguyện vãng sinh Cực Lạc."</em></p>
       </div>
@@ -208,10 +212,11 @@ const EMAIL_TEMPLATES = {
 function scheduleEmail(customerId, customerName, customerEmail, emailType, delayDays = 0, extra = {}) {
   if (!customerEmail || !customerEmail.includes('@')) return;
   const scheduledAt = new Date(Date.now() + delayDays * 24 * 60 * 60 * 1000).toISOString();
+  // Encrypt PII trước khi lưu vào queue
   db.prepare(`
     INSERT INTO email_queue (customer_id, customer_name, customer_email, email_type, order_code, amount, product_name, scheduled_at)
     VALUES (?,?,?,?,?,?,?,?)
-  `).run(customerId, customerName, customerEmail, emailType,
+  `).run(customerId, encrypt(customerName), encrypt(customerEmail), emailType,
          extra.orderCode || null, extra.amount || null, extra.productName || null,
          scheduledAt);
   console.log(`📅 Lên lịch email "${emailType}" cho ${customerEmail} sau ${delayDays} ngày`);
@@ -226,14 +231,17 @@ async function processEmailQueue() {
 
   for (const item of pending) {
     try {
+      // Decrypt PII trước khi gửi
+      const custName  = decrypt(item.customer_name);
+      const custEmail = decrypt(item.customer_email);
       let tpl;
-      if (item.email_type === 'welcome') tpl = EMAIL_TEMPLATES.welcome(item.customer_name);
-      else if (item.email_type === 'value') tpl = EMAIL_TEMPLATES.value(item.customer_name);
-      else if (item.email_type === 'invite') tpl = EMAIL_TEMPLATES.invite(item.customer_name);
-      else if (item.email_type === 'confirm') tpl = EMAIL_TEMPLATES.confirm(item.customer_name, item.order_code, item.product_name, item.amount);
+      if (item.email_type === 'welcome') tpl = EMAIL_TEMPLATES.welcome(custName);
+      else if (item.email_type === 'value') tpl = EMAIL_TEMPLATES.value(custName);
+      else if (item.email_type === 'invite') tpl = EMAIL_TEMPLATES.invite(custName);
+      else if (item.email_type === 'confirm') tpl = EMAIL_TEMPLATES.confirm(custName, item.order_code, item.product_name, item.amount);
       else continue;
 
-      const ok = await sendResendEmail(item.customer_email, tpl.subject, tpl.html);
+      const ok = await sendResendEmail(custEmail, tpl.subject, tpl.html);
       db.prepare(`UPDATE email_queue SET status=?, sent_at=datetime('now') WHERE id=?`)
         .run(ok ? 'sent' : 'failed', item.id);
     } catch(e) {
@@ -243,20 +251,18 @@ async function processEmailQueue() {
   }
 }
 
-// ─── CẤU HÌNH SEPAY (VietinBank) ─────────────────────────────
+// ─── CẤU HÌNH NGÂN HÀNG (lấy từ temple-config.js) ────────────
 const SEPAY_CONFIG = {
-  BANK_ID: 'vietinbank',
-  ACCOUNT_NUMBER: '102506196666',
-  ACCOUNT_NAME: 'NGUYEN MINH HIEU',
-  WEBHOOK_TOKEN: '',
+  BANK_ID:        TEMPLE.bank.primary.id,
+  ACCOUNT_NUMBER: TEMPLE.bank.primary.accountNumber,
+  ACCOUNT_NAME:   TEMPLE.bank.primary.accountName,
+  WEBHOOK_TOKEN:  '',
 };
-
-// ─── CẤU HÌNH AGRIBANK ────────────────────────────────────────
 const AGRIBANK_CONFIG = {
-  BANK_ID: 'agribank',
-  ACCOUNT_NUMBER: '2608205306753',
-  ACCOUNT_NAME: 'NGUYEN THI BAC',
-  DESCRIPTION: 'Sư Trụ Trì – Chùa Đại Khánh',
+  BANK_ID:        TEMPLE.bank.secondary.id,
+  ACCOUNT_NUMBER: TEMPLE.bank.secondary.accountNumber,
+  ACCOUNT_NAME:   TEMPLE.bank.secondary.accountName,
+  DESCRIPTION:    TEMPLE.bank.secondary.description || `Sư Trụ Trì – ${TEMPLE.name}`,
 };
 
 // ─── DATABASE ─────────────────────────────────────────────────
@@ -376,11 +382,126 @@ if (!db.prepare("SELECT value FROM settings WHERE key='admin_pass'").get()) {
   setAdminPass(ADMIN_DEFAULT_PASS);
 }
 
-// Migration: thêm cột address nếu chưa có (DB cũ)
-try {
-  db.exec("ALTER TABLE customers ADD COLUMN address TEXT");
-  console.log('✅ Migration: đã thêm cột address vào customers');
-} catch(e) { /* cột đã tồn tại, bỏ qua */ }
+// ─── MÃ HÓA DỮ LIỆU CÁ NHÂN (AES-256-GCM) ────────────────────
+// Đặt ENCRYPTION_KEY = 64 ký tự hex trong Railway env vars
+// Nếu không set → lưu plaintext (dev mode, backward compatible)
+const ENCRYPTION_KEY_HEX = process.env.ENCRYPTION_KEY || '';
+
+function _getKey() {
+  if (ENCRYPTION_KEY_HEX.length === 64) return Buffer.from(ENCRYPTION_KEY_HEX, 'hex');
+  if (ENCRYPTION_KEY_HEX.length === 32) return Buffer.from(ENCRYPTION_KEY_HEX, 'utf8');
+  return null;
+}
+
+function encrypt(text) {
+  if (text === null || text === undefined || text === '') return text ?? '';
+  const key = _getKey();
+  if (!key) return String(text);                          // no key → plaintext
+  const iv  = crypto.randomBytes(12);
+  const cip = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const enc = Buffer.concat([cip.update(String(text), 'utf8'), cip.final()]);
+  const tag = cip.getAuthTag();
+  return 'enc:' + iv.toString('base64') + ':' + tag.toString('base64') + ':' + enc.toString('base64');
+}
+
+function decrypt(text) {
+  if (!text || !String(text).startsWith('enc:')) return text ?? '';
+  const key = _getKey();
+  if (!key) return text;
+  try {
+    const parts = String(text).split(':');
+    if (parts.length !== 4) return text;
+    const iv  = Buffer.from(parts[1], 'base64');
+    const tag = Buffer.from(parts[2], 'base64');
+    const dat = Buffer.from(parts[3], 'base64');
+    const dec = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    dec.setAuthTag(tag);
+    return Buffer.concat([dec.update(dat), dec.final()]).toString('utf8');
+  } catch(e) { return text; }   // giải mã lỗi → trả về nguyên bản
+}
+
+// Hash SĐT để tra cứu nhanh (không cần decrypt)
+function phoneHash(phone) {
+  if (!phone) return '';
+  return crypto.createHash('sha256').update(String(phone).trim()).digest('hex');
+}
+
+// Bọc encrypt/decrypt cho từng bảng
+function encCustomer(c) {
+  return {
+    name:       encrypt(c.name),
+    phone:      encrypt(c.phone),
+    phone_hash: phoneHash(c.phone),
+    zalo:       encrypt(c.zalo),
+    email:      encrypt(c.email),
+    address:    encrypt(c.address),
+  };
+}
+function decCustomer(row) {
+  if (!row) return row;
+  return { ...row, name: decrypt(row.name), phone: decrypt(row.phone),
+           zalo: decrypt(row.zalo), email: decrypt(row.email), address: decrypt(row.address) };
+}
+function encPhatTu(p) {
+  return {
+    ho_ten:        encrypt(p.ho_ten),
+    so_dien_thoai: encrypt(p.so_dien_thoai),
+    phone_hash:    phoneHash(p.so_dien_thoai),
+    dia_chi:       encrypt(p.dia_chi),
+  };
+}
+function decPhatTu(row) {
+  if (!row) return row;
+  return { ...row, ho_ten: decrypt(row.ho_ten),
+           so_dien_thoai: decrypt(row.so_dien_thoai), dia_chi: decrypt(row.dia_chi) };
+}
+function encOrder(o) {
+  return { customer_name: encrypt(o.customer_name), customer_phone: encrypt(o.customer_phone) };
+}
+function decOrder(row) {
+  if (!row) return row;
+  return { ...row, customer_name: decrypt(row.customer_name), customer_phone: decrypt(row.customer_phone) };
+}
+
+console.log('🔐 Mã hóa PII:', ENCRYPTION_KEY_HEX ? `BẬT (key ${ENCRYPTION_KEY_HEX.length} chars)` : 'TẮT (dev mode)');
+
+// ─── MIGRATION: thêm cột phone_hash + address ──────────────────
+try { db.exec("ALTER TABLE customers ADD COLUMN address TEXT");
+      console.log('✅ Migration: cột address → customers'); } catch(e) {}
+try { db.exec("ALTER TABLE customers ADD COLUMN phone_hash TEXT DEFAULT ''");
+      console.log('✅ Migration: cột phone_hash → customers'); } catch(e) {}
+try { db.exec("ALTER TABLE phat_tu ADD COLUMN phone_hash TEXT DEFAULT ''");
+      console.log('✅ Migration: cột phone_hash → phat_tu'); } catch(e) {}
+
+// Lần đầu chạy với key: mã hóa lại dữ liệu cũ đang plaintext
+if (ENCRYPTION_KEY_HEX) {
+  const oldCustomers = db.prepare("SELECT * FROM customers WHERE name NOT LIKE 'enc:%'").all();
+  if (oldCustomers.length > 0) {
+    const upd = db.prepare('UPDATE customers SET name=?,phone=?,phone_hash=?,zalo=?,email=?,address=? WHERE id=?');
+    for (const c of oldCustomers) {
+      const e = encCustomer(c);
+      upd.run(e.name, e.phone, e.phone_hash, e.zalo, e.email, e.address, c.id);
+    }
+    console.log(`🔐 Đã mã hóa ${oldCustomers.length} bản ghi customers`);
+  }
+  const oldPhatTu = db.prepare("SELECT * FROM phat_tu WHERE ho_ten NOT LIKE 'enc:%'").all();
+  if (oldPhatTu.length > 0) {
+    const upd = db.prepare('UPDATE phat_tu SET ho_ten=?,so_dien_thoai=?,phone_hash=?,dia_chi=? WHERE id=?');
+    for (const p of oldPhatTu) {
+      const e = encPhatTu(p);
+      upd.run(e.ho_ten, e.so_dien_thoai, e.phone_hash, e.dia_chi, p.id);
+    }
+    console.log(`🔐 Đã mã hóa ${oldPhatTu.length} bản ghi phat_tu`);
+  }
+  const oldOrders = db.prepare("SELECT * FROM orders WHERE customer_name NOT LIKE 'enc:%'").all();
+  if (oldOrders.length > 0) {
+    const upd = db.prepare('UPDATE orders SET customer_name=?,customer_phone=? WHERE id=?');
+    for (const o of oldOrders) {
+      upd.run(encrypt(o.customer_name), encrypt(o.customer_phone), o.id);
+    }
+    console.log(`🔐 Đã mã hóa ${oldOrders.length} bản ghi orders`);
+  }
+}
 
 // Seed sản phẩm mẫu
 const { cnt } = db.prepare('SELECT COUNT(*) as cnt FROM products').get();
@@ -419,8 +540,20 @@ app.get('/admin/logout', (req, res) => {
   res.redirect('/admin/login');
 });
 
+// ─── API: KIỂM TRA CHẾ ĐỘ MẬT KHẨU ────────────────────────────
+app.get('/api/admin/auth-mode', requireAdmin, (req, res) => {
+  res.json({ envControlled: !!process.env.ADMIN_PASS });
+});
+
 // ─── API: ĐỔI MẬT KHẨU ───────────────────────────────────────
 app.post('/api/admin/change-password', requireAdmin, (req, res) => {
+  // Nếu ADMIN_PASS đang set bởi env var → DB change không có tác dụng
+  if (process.env.ADMIN_PASS) {
+    return res.json({
+      success: false,
+      error: 'Mật khẩu đang được kiểm soát bởi biến môi trường ADMIN_PASS trên Railway. Vào Railway → Variables → cập nhật giá trị ADMIN_PASS tại đó rồi Redeploy.'
+    });
+  }
   const { oldPass, newPass, confirmPass } = req.body;
   const curPass = getAdminPass();
   if (oldPass !== curPass) return res.json({ success: false, error: 'Mật khẩu cũ không đúng' });
@@ -436,9 +569,9 @@ app.post('/api/admin/change-password', requireAdmin, (req, res) => {
 app.post('/admin/forgot-password', express.urlencoded({ extended: false }), async (req, res) => {
   const curPass = getAdminPass();
   try {
-    const sent = await sendMail(ADMIN_EMAIL, '🔐 Mật khẩu Admin – Chùa Đại Khánh',
+    const sent = await sendMail(ADMIN_EMAIL, `🔐 Mật khẩu Admin – ${TEMPLE.name}`,
       `<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#fff;border-radius:12px;border:1px solid #e5d8c0">
-        <h2 style="color:#500a14">🏛️ Chùa Đại Khánh – Admin</h2>
+        <h2 style="color:#500a14">${TEMPLE.emoji} ${TEMPLE.name} – Admin</h2>
         <p style="color:#555">Bạn vừa yêu cầu lấy lại mật khẩu admin.</p>
         <div style="background:#fdf9f0;border:1px dashed #c9921f;border-radius:8px;padding:16px 20px;margin:20px 0">
           <div style="font-size:13px;color:#888">Tài khoản</div>
@@ -511,15 +644,20 @@ app.delete('/api/products/:id', requireAdmin, (req, res) => {
 // ─── API: CUSTOMERS ────────────────────────────────────────────
 // GET: chỉ admin mới xem được danh sách phật tử
 app.get('/api/customers', requireAdmin, (req, res) => {
-  res.json(db.prepare('SELECT * FROM customers ORDER BY id DESC').all());
+  const rows = db.prepare('SELECT * FROM customers ORDER BY id DESC').all();
+  res.json(rows.map(decCustomer));
 });
 
-// GET 1: lấy thông tin 1 phật tử (dùng khi trang công đức check trùng SĐT)
+// GET: check trùng SĐT (public — dùng phone_hash, KHÔNG lộ dữ liệu)
 app.get('/api/customers/check', (req, res) => {
   const { phone } = req.query;
   if (!phone) return res.json({ exists: false });
-  const row = db.prepare('SELECT id, name FROM customers WHERE phone=?').get(phone);
-  res.json(row ? { exists: true, id: row.id, name: row.name } : { exists: false });
+  const hash = phoneHash(phone);
+  // Tìm theo hash trước (encrypted DB), fallback plaintext (dev mode)
+  let row = db.prepare('SELECT id, name FROM customers WHERE phone_hash=?').get(hash);
+  if (!row) row = db.prepare('SELECT id, name FROM customers WHERE phone=?').get(phone);
+  if (!row) return res.json({ exists: false });
+  res.json({ exists: true, id: row.id, name: decrypt(row.name) });
 });
 
 // POST: tạo mới thủ công (admin only) — auto-add qua /api/orders
@@ -527,14 +665,16 @@ app.post('/api/customers', requireAdmin, async (req, res) => {
   const { name, phone, zalo, email, address } = req.body;
   if (!name) return res.status(400).json({ error: 'Thiếu tên' });
 
-  // Kiểm tra trùng SĐT
+  // Kiểm tra trùng SĐT qua hash
   if (phone) {
-    const ex = db.prepare('SELECT id FROM customers WHERE phone=?').get(phone);
+    const hash = phoneHash(phone);
+    const ex = db.prepare('SELECT id FROM customers WHERE phone_hash=? OR phone=?').get(hash, phone);
     if (ex) return res.json({ id: ex.id, existing: true });
   }
 
-  const r = db.prepare('INSERT INTO customers (name,phone,zalo,email,address) VALUES (?,?,?,?,?)')
-    .run(name, phone||'', zalo||'', email||'', address||'');
+  const e = encCustomer({ name, phone, zalo, email, address });
+  const r = db.prepare('INSERT INTO customers (name,phone,phone_hash,zalo,email,address) VALUES (?,?,?,?,?,?)')
+    .run(e.name, e.phone, e.phone_hash, e.zalo, e.email, e.address);
   const customerId = r.lastInsertRowid;
 
   // Tự động gửi email chào mừng
@@ -554,8 +694,9 @@ app.put('/api/customers/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id);
   const exists = db.prepare('SELECT id FROM customers WHERE id=?').get(id);
   if (!exists) return res.status(404).json({ error: 'Không tìm thấy' });
-  db.prepare('UPDATE customers SET name=?,phone=?,zalo=?,email=?,address=? WHERE id=?')
-    .run(name, phone||'', zalo||'', email||'', address||'', id);
+  const e = encCustomer({ name, phone, zalo, email, address });
+  db.prepare('UPDATE customers SET name=?,phone=?,phone_hash=?,zalo=?,email=?,address=? WHERE id=?')
+    .run(e.name, e.phone, e.phone_hash, e.zalo, e.email, e.address, id);
   res.json({ success: true });
 });
 
@@ -568,13 +709,18 @@ app.delete('/api/customers/:id', requireAdmin, (req, res) => {
 // ─── API: ORDERS ───────────────────────────────────────────────
 // GET danh sách: chỉ admin (bảo vệ thông tin phật tử)
 app.get('/api/orders', requireAdmin, (req, res) => {
-  res.json(db.prepare('SELECT * FROM orders ORDER BY id DESC').all());
+  const rows = db.prepare('SELECT * FROM orders ORDER BY id DESC').all();
+  res.json(rows.map(decOrder));
 });
-// GET theo code: public (phật tử kiểm tra đơn của mình)
+// GET theo code: public — trả về thông tin tối thiểu (không lộ PII đầy đủ)
 app.get('/api/orders/code/:code', (req, res) => {
   const order = db.prepare('SELECT * FROM orders WHERE order_code=?').get(req.params.code);
   if (!order) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
-  res.json(order);
+  const dec = decOrder(order);
+  // Che bớt SĐT cho public (hiện 3 số cuối)
+  const phone = dec.customer_phone || '';
+  dec.customer_phone = phone.length > 3 ? '****' + phone.slice(-3) : phone;
+  res.json(dec);
 });
 
 // ─── API: STATS ────────────────────────────────────────────────
@@ -593,7 +739,7 @@ app.get('/api/stats', requireAdmin, (req, res) => {
 
 // ─── API: EXPORT CSV ───────────────────────────────────────────
 app.get('/api/orders/export', requireAdmin, (req, res) => {
-  const orders = db.prepare('SELECT * FROM orders ORDER BY id DESC').all();
+  const orders = db.prepare('SELECT * FROM orders ORDER BY id DESC').all().map(decOrder);
   const rows = [['Mã đơn','Phật tử','SĐT','Nghi lễ','Số tiền','Trạng thái','Ghi chú','Ngày tạo','Ngày CĐ']];
   orders.forEach(o => {
     rows.push([o.order_code, o.customer_name, o.customer_phone,
@@ -617,28 +763,30 @@ app.post('/api/orders', async (req, res) => {
   let customer_id = null;
   let customer_email = null;
   if (customer_phone) {
-    const ex = db.prepare('SELECT id, email FROM customers WHERE phone=?').get(customer_phone);
+    const hash = phoneHash(customer_phone);
+    const ex = db.prepare('SELECT id, email FROM customers WHERE phone_hash=? OR phone=?').get(hash, customer_phone);
     if (ex) {
       customer_id = ex.id;
-      customer_email = ex.email;
-      // Cập nhật email/address nếu phật tử chưa có
+      customer_email = decrypt(ex.email);
       if (!ex.email && reqEmail) {
-        db.prepare('UPDATE customers SET email=? WHERE id=?').run(reqEmail, customer_id);
+        db.prepare('UPDATE customers SET email=? WHERE id=?').run(encrypt(reqEmail), customer_id);
         customer_email = reqEmail;
       }
     } else {
-      // Auto-tạo phật tử mới khi đặt nghi lễ/công đức
-      const r = db.prepare('INSERT INTO customers (name,phone,email,address) VALUES (?,?,?,?)')
-        .run(customer_name, customer_phone, reqEmail||'', customer_address||'');
+      const e = encCustomer({ name: customer_name, phone: customer_phone,
+                               zalo: '', email: reqEmail||'', address: customer_address||'' });
+      const r = db.prepare('INSERT INTO customers (name,phone,phone_hash,zalo,email,address) VALUES (?,?,?,?,?,?)')
+        .run(e.name, e.phone, e.phone_hash, e.zalo, e.email, e.address);
       customer_id = r.lastInsertRowid;
       customer_email = reqEmail || null;
     }
   }
 
+  const eo = encOrder({ customer_name, customer_phone: customer_phone ?? '' });
   const r = db.prepare(`
     INSERT INTO orders (order_code,customer_id,customer_name,customer_phone,product_id,product_name,amount,note)
     VALUES (?,?,?,?,?,?,?,?)
-  `).run(order_code, customer_id, customer_name, customer_phone ?? '',
+  `).run(order_code, customer_id, eo.customer_name, eo.customer_phone,
          product_id ?? null, product_name ?? '', amount, note ?? '');
 
   if (product_id) {
@@ -655,17 +803,18 @@ app.put('/api/orders/:id', requireAdmin, async (req, res) => {
     ? existing?.paid_at || new Date().toISOString()
     : null;
 
+  const eo = encOrder({ customer_name, customer_phone });
   db.prepare(`
     UPDATE orders SET status=?,customer_name=?,customer_phone=?,product_name=?,amount=?,note=?,
     paid_at=COALESCE(paid_at,?) WHERE id=?
-  `).run(status, customer_name, customer_phone, product_name, amount, note, paid_at, req.params.id);
+  `).run(status, eo.customer_name, eo.customer_phone, product_name, amount, note, paid_at, req.params.id);
 
   // 🤖 GỬI EMAIL XÁC NHẬN khi đơn thành công lần đầu
   if (status === 'success' && existing?.status !== 'success' && existing) {
     const customer = existing.customer_id
       ? db.prepare('SELECT email FROM customers WHERE id=?').get(existing.customer_id)
       : null;
-    const email = customer?.email;
+    const email = customer ? decrypt(customer.email) : null;
     if (email) {
       scheduleEmail(existing.customer_id, customer_name, email, 'confirm', 0, {
         orderCode: existing.order_code,
@@ -707,8 +856,10 @@ app.post('/webhook/sepay', async (req, res) => {
         const customer = order.customer_id
           ? db.prepare('SELECT email FROM customers WHERE id=?').get(order.customer_id)
           : null;
-        if (customer?.email) {
-          scheduleEmail(order.customer_id, order.customer_name, customer.email, 'confirm', 0, {
+        const custEmail = customer ? decrypt(customer.email) : null;
+        const custName  = decrypt(order.customer_name);
+        if (custEmail) {
+          scheduleEmail(order.customer_id, custName, custEmail, 'confirm', 0, {
             orderCode: order.order_code,
             productName: order.product_name,
             amount: order.amount
@@ -807,27 +958,30 @@ app.get('/api/lunar', requireAdmin, (req,res) => {
 
 // ─── API: PHẬT TỬ (Admin only) ────────────────────────────────
 app.get('/api/phat-tu', requireAdmin, (req,res) => {
-  res.json(db.prepare('SELECT * FROM phat_tu ORDER BY id DESC').all());
+  res.json(db.prepare('SELECT * FROM phat_tu ORDER BY id DESC').all().map(decPhatTu));
 });
 app.post('/api/phat-tu', requireAdmin, (req,res) => {
   const {ho_ten,so_dien_thoai,dia_chi}=req.body;
   if(!ho_ten) return res.json({error:'Thiếu họ tên'});
-  const r=db.prepare('INSERT INTO phat_tu (ho_ten,so_dien_thoai,dia_chi) VALUES (?,?,?)')
-    .run(ho_ten.trim(),so_dien_thoai||'',dia_chi||'');
+  const e=encPhatTu({ho_ten:ho_ten.trim(),so_dien_thoai:so_dien_thoai||'',dia_chi:dia_chi||''});
+  const r=db.prepare('INSERT INTO phat_tu (ho_ten,so_dien_thoai,phone_hash,dia_chi) VALUES (?,?,?,?)')
+    .run(e.ho_ten,e.so_dien_thoai,e.phone_hash,e.dia_chi);
   res.json({id:r.lastInsertRowid});
 });
 app.put('/api/phat-tu/:id', requireAdmin, (req,res) => {
   const {ho_ten,so_dien_thoai,dia_chi}=req.body;
-  db.prepare('UPDATE phat_tu SET ho_ten=?,so_dien_thoai=?,dia_chi=? WHERE id=?')
-    .run(ho_ten,so_dien_thoai||'',dia_chi||'',req.params.id);
+  const e=encPhatTu({ho_ten,so_dien_thoai:so_dien_thoai||'',dia_chi:dia_chi||''});
+  db.prepare('UPDATE phat_tu SET ho_ten=?,so_dien_thoai=?,phone_hash=?,dia_chi=? WHERE id=?')
+    .run(e.ho_ten,e.so_dien_thoai,e.phone_hash,e.dia_chi,req.params.id);
   res.json({success:true});
 });
 app.delete('/api/phat-tu/:id', requireAdmin, (req,res) => {
   db.prepare('DELETE FROM phat_tu WHERE id=?').run(req.params.id);
   res.json({success:true});
 });
+// Tìm kiếm phật tử — decrypt in-memory rồi filter (safe với dữ liệu mã hóa)
 app.get('/api/phat-tu/tim-kiem', requireAdmin, (req,res) => {
-  const q='%'+(req.query.q||'')+'%';
+  const q=(req.query.q||'').toLowerCase().trim();
   const rows=db.prepare(`
     SELECT d.*,p.ho_ten,p.so_dien_thoai,p.dia_chi,
            tt.trang_thai as tt_tt,
@@ -836,10 +990,18 @@ app.get('/api/phat-tu/tim-kiem', requireAdmin, (req,res) => {
     LEFT JOIN don_cong_duc d ON d.phat_tu_id=p.id
     LEFT JOIN thanh_toan_le tt ON tt.don_id=d.id
     LEFT JOIN lich_le l ON l.don_id=d.id
-    WHERE p.ho_ten LIKE ? OR p.so_dien_thoai LIKE ? OR p.dia_chi LIKE ?
-    ORDER BY d.id DESC LIMIT 100
-  `).all(q,q,q);
-  res.json(rows);
+    ORDER BY d.id DESC LIMIT 500
+  `).all();
+  const filtered = rows.map(r=>({...r,
+    ho_ten:        decrypt(r.ho_ten),
+    so_dien_thoai: decrypt(r.so_dien_thoai),
+    dia_chi:       decrypt(r.dia_chi),
+  })).filter(r=>!q||
+    (r.ho_ten||'').toLowerCase().includes(q)||
+    (r.so_dien_thoai||'').includes(q)||
+    (r.dia_chi||'').toLowerCase().includes(q)
+  ).slice(0,100);
+  res.json(filtered);
 });
 app.get('/api/phat-tu/:id', requireAdmin, (req,res) => {
   const pt=db.prepare('SELECT * FROM phat_tu WHERE id=?').get(req.params.id);
@@ -851,7 +1013,7 @@ app.get('/api/phat-tu/:id', requireAdmin, (req,res) => {
     LEFT JOIN lich_le l ON l.don_id=d.id
     WHERE d.phat_tu_id=? ORDER BY d.id DESC
   `).all(req.params.id);
-  res.json({...pt,don});
+  res.json({...decPhatTu(pt),don});
 });
 
 // ─── API: ĐƠN CÔNG ĐỨC (Admin only) ─────────────────────────
@@ -869,7 +1031,11 @@ app.get('/api/don-cong-duc', requireAdmin, (req,res) => {
     LEFT JOIN lich_le l ON l.don_id=d.id
     ${where} ORDER BY d.id DESC LIMIT 500
   `).all(...args);
-  res.json(rows);
+  res.json(rows.map(r=>({...r,
+    ho_ten:        decrypt(r.ho_ten),
+    so_dien_thoai: decrypt(r.so_dien_thoai),
+    dia_chi:       decrypt(r.dia_chi),
+  })));
 });
 app.post('/api/don-cong-duc', requireAdmin, (req,res) => {
   const {phat_tu_id,dich_vu,noi_dung_cau_nguyen,so_tien}=req.body;
@@ -944,12 +1110,16 @@ app.get('/api/lich-le/calendar', requireAdmin, (req,res) => {
     WHERE l.ngay_duong>=? AND l.ngay_duong<=?
     ORDER BY l.ngay_duong ASC
   `).all(from,to);
-  res.json(rows);
+  res.json(rows.map(r=>({...r,
+    ho_ten:        decrypt(r.ho_ten),
+    so_dien_thoai: decrypt(r.so_dien_thoai),
+    dia_chi:       decrypt(r.dia_chi),
+  })));
 });
 
 // ─── API: TÌM KIẾM PHẬT TỬ ───────────────────────────────────
 app.get('/api/phat-tu/search', requireAdmin, (req,res) => {
-  const q='%'+(req.query.q||'')+'%';
+  const q=(req.query.q||'').toLowerCase().trim();
   const rows=db.prepare(`
     SELECT d.*,p.ho_ten,p.so_dien_thoai,p.dia_chi,
            tt.trang_thai as tt_tt,
@@ -958,10 +1128,18 @@ app.get('/api/phat-tu/search', requireAdmin, (req,res) => {
     LEFT JOIN don_cong_duc d ON d.phat_tu_id=p.id
     LEFT JOIN thanh_toan_le tt ON tt.don_id=d.id
     LEFT JOIN lich_le l ON l.don_id=d.id
-    WHERE p.ho_ten LIKE ? OR p.so_dien_thoai LIKE ? OR p.dia_chi LIKE ?
-    ORDER BY d.id DESC LIMIT 100
-  `).all(q,q,q);
-  res.json(rows);
+    ORDER BY d.id DESC LIMIT 500
+  `).all();
+  const filtered=rows.map(r=>({...r,
+    ho_ten:        decrypt(r.ho_ten),
+    so_dien_thoai: decrypt(r.so_dien_thoai),
+    dia_chi:       decrypt(r.dia_chi),
+  })).filter(r=>!q||
+    (r.ho_ten||'').toLowerCase().includes(q)||
+    (r.so_dien_thoai||'').includes(q)||
+    (r.dia_chi||'').toLowerCase().includes(q)
+  ).slice(0,100);
+  res.json(filtered);
 });
 
 // ─── API: STATS LỊCH LỄ ──────────────────────────────────────
@@ -988,7 +1166,7 @@ app.get('/api/copy-don/:id', requireAdmin, (req,res) => {
     WHERE d.id=?
   `).get(req.params.id);
   if(!row) return res.json({error:'Không tìm thấy'});
-  const text=`Họ tên: ${row.ho_ten}\nSĐT: ${row.so_dien_thoai||''}\nĐịa chỉ: ${row.dia_chi||''}\nDịch vụ: ${row.dich_vu||''}\nNội dung: ${row.noi_dung_cau_nguyen||''}\nNgày lễ (âm): ${row.ngay_am||'Chưa đặt lịch'}`;
+  const text=`Họ tên: ${decrypt(row.ho_ten)}\nSĐT: ${decrypt(row.so_dien_thoai)||''}\nĐịa chỉ: ${decrypt(row.dia_chi)||''}\nDịch vụ: ${row.dich_vu||''}\nNội dung: ${row.noi_dung_cau_nguyen||''}\nNgày lễ (âm): ${row.ngay_am||'Chưa đặt lịch'}`;
   res.json({text});
 });
 app.get('/api/copy-nhom/:trang_thai', requireAdmin, (req,res) => {
@@ -1000,13 +1178,16 @@ app.get('/api/copy-nhom/:trang_thai', requireAdmin, (req,res) => {
     WHERE l.trang_thai=? ORDER BY l.ngay_duong ASC
   `).all(req.params.trang_thai);
   const labels={chua_hen:'CHƯA HẸN',da_hen:'ĐÃ HẸN',da_xin_doi_lich:'ĐÃ ĐỔI LỊCH',da_hoan_thanh:'ĐÃ HOÀN THÀNH'};
-  const text=rows.length?`=== ${labels[req.params.trang_thai]||''} ===\n\n`+rows.map((r,i)=>`${i+1}. ${r.ho_ten} | SĐT: ${r.so_dien_thoai||''} | ${r.dich_vu||''} | Ngày âm: ${r.ngay_am||'Chưa đặt'}`).join('\n')
+  const dec=rows.map(r=>({...r,ho_ten:decrypt(r.ho_ten),so_dien_thoai:decrypt(r.so_dien_thoai)}));
+  const text=dec.length?`=== ${labels[req.params.trang_thai]||''} ===\n\n`+dec.map((r,i)=>`${i+1}. ${r.ho_ten} | SĐT: ${r.so_dien_thoai||''} | ${r.dich_vu||''} | Ngày âm: ${r.ngay_am||'Chưa đặt'}`).join('\n')
     :`=== ${labels[req.params.trang_thai]||''} ===\n(Không có)`;
   res.json({text});
 });
 app.get('/api/copy-tat-ca', requireAdmin, (req,res) => {
-  const daHen=db.prepare(`SELECT p.ho_ten,p.so_dien_thoai,d.dich_vu,l.ngay_am FROM lich_le l LEFT JOIN don_cong_duc d ON d.id=l.don_id LEFT JOIN phat_tu p ON p.id=d.phat_tu_id WHERE l.trang_thai IN ('da_hen','da_xin_doi_lich') ORDER BY l.ngay_duong ASC`).all();
-  const chuaHen=db.prepare(`SELECT p.ho_ten,p.so_dien_thoai,d.dich_vu,l.ngay_am FROM lich_le l LEFT JOIN don_cong_duc d ON d.id=l.don_id LEFT JOIN phat_tu p ON p.id=d.phat_tu_id WHERE l.trang_thai='chua_hen' ORDER BY d.id ASC`).all();
+  const rawDaHen=db.prepare(`SELECT p.ho_ten,p.so_dien_thoai,d.dich_vu,l.ngay_am FROM lich_le l LEFT JOIN don_cong_duc d ON d.id=l.don_id LEFT JOIN phat_tu p ON p.id=d.phat_tu_id WHERE l.trang_thai IN ('da_hen','da_xin_doi_lich') ORDER BY l.ngay_duong ASC`).all();
+  const rawChuaHen=db.prepare(`SELECT p.ho_ten,p.so_dien_thoai,d.dich_vu,l.ngay_am FROM lich_le l LEFT JOIN don_cong_duc d ON d.id=l.don_id LEFT JOIN phat_tu p ON p.id=d.phat_tu_id WHERE l.trang_thai='chua_hen' ORDER BY d.id ASC`).all();
+  const dec=r=>({...r,ho_ten:decrypt(r.ho_ten),so_dien_thoai:decrypt(r.so_dien_thoai)});
+  const daHen=rawDaHen.map(dec), chuaHen=rawChuaHen.map(dec);
   const fmt=(label,rows)=>rows.length?`=== ${label} ===\n\n`+rows.map((r,i)=>`${i+1}. ${r.ho_ten} | SĐT: ${r.so_dien_thoai||''} | ${r.dich_vu||''} | Ngày âm: ${r.ngay_am||'Chưa đặt'}`).join('\n'):`=== ${label} ===\n(Không có)`;
   res.json({text:fmt('DANH SÁCH ĐÃ HẸN',daHen)+'\n\n'+'─'.repeat(40)+'\n\n'+fmt('CHƯA HẸN',chuaHen)});
 });
@@ -1025,7 +1206,7 @@ setInterval(() => processEmailQueue(), 30 * 60 * 1000); // Mỗi 30 phút
 app.listen(PORT, () => {
   console.log('');
   console.log('══════════════════════════════════════════════════');
-  console.log('  🏛️  Chùa Đại Khánh – Server đang chạy');
+  console.log(`  ${TEMPLE.emoji}  ${TEMPLE.name} – Server đang chạy`);
   console.log('══════════════════════════════════════════════════');
   console.log(`  🌐  Website:      http://localhost:${PORT}`);
   console.log(`  📊  Admin Panel:  http://localhost:${PORT}/admin`);

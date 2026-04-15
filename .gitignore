@@ -1,8 +1,27 @@
+# ── Dependencies ───────────────────────────────────────────
 node_modules/
-brain.db
-.env
-*.log
 
-adm_test*
+# ── Secrets — TUYỆT ĐỐI KHÔNG commit ──────────────────────
+.env
+.env.local
+.env.production
+.env.*.local
+
+# ── Database (chứa dữ liệu thật + mật khẩu admin) ─────────
+*.db
+*.sqlite
+*.sqlite3
 *.db-shm
 *.db-wal
+
+# ── Logs ───────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ── Test / temp files ──────────────────────────────────────
+adm_test*
+*.tmp
+
+# ── OS files ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db

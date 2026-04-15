@@ -7,124 +7,236 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
     font-family: 'Be Vietnam Pro', sans-serif;
     min-height: 100vh;
     background: linear-gradient(135deg, #1a0d05 0%, #500a14 50%, #7a0c1e 100%);
     display: flex; align-items: center; justify-content: center;
-    padding: 20px;
+    padding: 16px;
   }
 
   .card {
     background: #fff;
     border-radius: 24px;
-    padding: 48px 40px;
+    padding: 40px 36px 32px;
     width: 100%; max-width: 400px;
     box-shadow: 0 32px 80px rgba(0,0,0,0.4);
     text-align: center;
     animation: fadeUp 0.4s ease;
   }
   @keyframes fadeUp {
-    from { opacity:0; transform:translateY(30px); }
+    from { opacity:0; transform:translateY(24px); }
     to   { opacity:1; transform:translateY(0); }
   }
 
-  .logo { font-size: 52px; margin-bottom: 12px; }
-
+  /* ── Logo & tiêu đề ── */
+  .logo { font-size: 48px; margin-bottom: 10px; line-height: 1; }
   .title {
     font-family: 'Cormorant Garamond', serif;
     font-size: 26px; font-weight: 600;
-    color: #500a14;
-    margin-bottom: 4px;
+    color: #500a14; margin-bottom: 4px;
   }
-  .subtitle { font-size: 13px; color: #888; margin-bottom: 32px; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 28px; line-height: 1.5; }
 
-  .form-group { margin-bottom: 16px; text-align: left; }
+  /* ── Form ── */
+  .form-group { margin-bottom: 14px; text-align: left; }
   .form-group label {
     display: block; font-size: 12px; font-weight: 600;
-    color: #555; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;
+    color: #555; margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 0.05em;
   }
+  .input-wrap { position: relative; }
   .form-group input {
-    width: 100%; padding: 13px 16px;
+    width: 100%; padding: 13px 44px 13px 16px;
     border: 1.5px solid #e5d8c0; border-radius: 10px;
     font-size: 15px; font-family: inherit;
-    background: #faf5ea;
+    background: #faf5ea; color: #1a0d05;
     transition: border-color 0.2s, box-shadow 0.2s;
-    color: #1a0d05;
+    -webkit-appearance: none;          /* iOS border fix */
   }
   .form-group input:focus {
     outline: none;
     border-color: #7a0c1e;
-    box-shadow: 0 0 0 3px rgba(122,12,30,0.1);
+    box-shadow: 0 0 0 3px rgba(122,12,30,0.12);
     background: #fff;
   }
+  /* Nút toggle mật khẩu */
+  .toggle-pw {
+    position: absolute; right: 12px; top: 50%;
+    transform: translateY(-50%);
+    background: none; border: none;
+    font-size: 18px; color: #aaa;
+    cursor: pointer; padding: 4px 2px;
+    line-height: 1; user-select: none;
+    /* vùng chạm lớn hơn cho mobile */
+    min-width: 32px; min-height: 32px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .toggle-pw:focus { outline: none; }
 
-  .btn {
+  /* ── Nút đăng nhập ── */
+  .btn-login {
     width: 100%; padding: 14px;
     background: linear-gradient(135deg, #7a0c1e, #500a14);
     color: #fff; border: none; border-radius: 12px;
     font-size: 16px; font-weight: 600; font-family: inherit;
-    cursor: pointer; margin-top: 8px;
+    cursor: pointer; margin-top: 6px;
     transition: all 0.2s; letter-spacing: 0.02em;
+    -webkit-appearance: none;
   }
-  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(122,12,30,0.4); }
-  .btn:active { transform: translateY(0); }
+  .btn-login:hover  { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(122,12,30,0.35); }
+  .btn-login:active { transform: translateY(0); }
 
-  .error {
-    background: #fee2e2; border: 1px solid #fca5a5;
+  /* ── Nút phụ (ghost) ── */
+  .btn-ghost {
+    width: 100%; padding: 12px 16px;
+    background: none; border: 1.5px solid #e5d8c0;
+    border-radius: 10px; color: #888;
+    font-size: 13px; font-family: inherit; font-weight: 500;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    -webkit-appearance: none;
+  }
+  .btn-ghost:hover  { border-color: #7a0c1e; color: #7a0c1e; background: #faf5ea; }
+  .btn-ghost:active { background: #f5ece0; }
+
+  /* ── Nút về trang chủ ── */
+  .btn-home {
+    width: 100%; padding: 12px 16px;
+    background: rgba(80,10,20,0.06); border: 1.5px solid rgba(80,10,20,0.15);
+    border-radius: 10px; color: #500a14;
+    font-size: 13px; font-family: inherit; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+    text-decoration: none;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn-home:hover  { background: rgba(80,10,20,0.12); border-color: #7a0c1e; }
+  .btn-home:active { background: rgba(80,10,20,0.18); }
+
+  /* ── Alert boxes ── */
+  .alert {
     border-radius: 10px; padding: 12px 16px;
-    color: #991b1b; font-size: 13px;
-    margin-bottom: 20px; display: none;
+    font-size: 13px; margin-bottom: 18px;
+    display: none; text-align: left; line-height: 1.5;
   }
-  .error.show { display: block; }
+  .alert.show { display: block; }
+  .alert-error   { background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; }
+  .alert-warn    { background: #fef9c3; border: 1px solid #fbbf24; color: #92400e; }
+  .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
 
-  .footer { margin-top: 28px; font-size: 12px; color: #aaa; }
+  /* ── Divider ── */
+  .divider {
+    display: flex; align-items: center; gap: 10px;
+    margin: 14px 0; color: #ccc; font-size: 12px;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1; height: 1px; background: #e5d8c0;
+  }
+
+  /* ── Footer ── */
+  .footer { margin-top: 22px; font-size: 12px; color: #bbb; line-height: 1.6; }
+
+  /* ── Responsive: điện thoại nhỏ ── */
+  @media (max-width: 420px) {
+    .card { padding: 32px 20px 24px; border-radius: 20px; }
+    .title { font-size: 22px; }
+    .logo  { font-size: 42px; }
+    .form-group input { font-size: 16px; /* tránh iOS auto-zoom */ }
+    .btn-login { font-size: 15px; padding: 13px; }
+  }
+  @media (max-width: 320px) {
+    body { padding: 10px; }
+    .card { padding: 24px 14px 20px; }
+  }
 </style>
 </head>
 <body>
 <div class="card">
   <div class="logo">🏛️</div>
   <div class="title">Chùa Đại Khánh</div>
-  <div class="subtitle">Trang quản trị – Chỉ dành cho Ban quản lý</div>
+  <div class="subtitle">Trang quản trị · Chỉ dành cho Ban quản lý</div>
 
-  <div class="error" id="err-box">❌ Tài khoản hoặc mật khẩu không đúng.</div>
-  <div class="error" id="forgot-err-box" style="background:#fef9c3;border-color:#fbbf24;color:#92400e">
-    ⚠️ Gửi email thất bại. Kiểm tra cấu hình Gmail trên Railway.
-  </div>
-  <div id="forgot-ok-box" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;color:#166534;font-size:13px;margin-bottom:20px">
-    ✅ Đã gửi mật khẩu về <strong>minhhieubg99@gmail.com</strong>. Kiểm tra hộp thư nhé!
+  <!-- Alert: sai mật khẩu -->
+  <div class="alert alert-error" id="err-box">❌ Tài khoản hoặc mật khẩu không đúng.</div>
+
+  <!-- Alert: quên mật khẩu – thất bại -->
+  <div class="alert alert-warn" id="forgot-err-box">
+    ⚠️ Gửi email thất bại. Kiểm tra cấu hình <strong>GMAIL_PASS</strong> trên Railway.
   </div>
 
+  <!-- Alert: quên mật khẩu – thành công -->
+  <div class="alert alert-success" id="forgot-ok-box">
+    ✅ Đã gửi mật khẩu về <strong>email admin</strong>. Kiểm tra hộp thư nhé!
+  </div>
+
+  <!-- Form đăng nhập -->
   <form method="POST" action="/admin/login" id="login-form">
     <div class="form-group">
-      <label>Tài khoản</label>
-      <input type="text" name="username" placeholder="Nhập tài khoản" required autocomplete="username">
+      <label for="inp-user">Tài khoản</label>
+      <input type="text" id="inp-user" name="username"
+        placeholder="Nhập tài khoản" required
+        autocomplete="username" inputmode="text">
     </div>
     <div class="form-group">
-      <label>Mật khẩu</label>
-      <input type="password" name="password" placeholder="Nhập mật khẩu" required autocomplete="current-password">
+      <label for="inp-pass">Mật khẩu</label>
+      <div class="input-wrap">
+        <input type="password" id="inp-pass" name="password"
+          placeholder="Nhập mật khẩu" required
+          autocomplete="current-password">
+        <button type="button" class="toggle-pw" id="btn-toggle-pw"
+          onclick="togglePass()" aria-label="Hiện/ẩn mật khẩu"
+          tabindex="-1">👁</button>
+      </div>
     </div>
-    <button type="submit" class="btn">🔐 Đăng nhập</button>
+    <button type="submit" class="btn-login">🔐 Đăng nhập</button>
   </form>
 
-  <form method="POST" action="/admin/forgot-password" style="margin-top:16px">
-    <button type="submit" style="width:100%;background:none;border:1.5px solid #e5d8c0;border-radius:10px;
-      padding:11px;color:#888;font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.2s"
-      onmouseover="this.style.borderColor='#7a0c1e';this.style.color='#7a0c1e'"
-      onmouseout="this.style.borderColor='#e5d8c0';this.style.color='#888'"
-      onclick="return confirm('Gửi mật khẩu về email minhhieubg99@gmail.com?')">
+  <!-- Divider -->
+  <div class="divider">hoặc</div>
+
+  <!-- Nút quên mật khẩu -->
+  <form method="POST" action="/admin/forgot-password" id="forgot-form" style="margin-bottom:10px">
+    <button type="button" class="btn-ghost" onclick="submitForgot()">
       📧 Quên mật khẩu – Gửi về Gmail
     </button>
   </form>
+
+  <!-- Nút về trang chủ -->
+  <a href="/" class="btn-home">
+    🏠 Quay về trang chủ
+  </a>
 
   <div class="footer">🪷 Nam Mô A Di Đà Phật 🪷</div>
 </div>
 
 <script>
+  // ── Hiển thị alert theo query string ──────────────────────────
   const p = new URLSearchParams(location.search);
-  if (p.get('err') === '1') document.getElementById('err-box').classList.add('show');
+  if (p.get('err')    === '1')   document.getElementById('err-box').classList.add('show');
   if (p.get('forgot') === 'err') document.getElementById('forgot-err-box').classList.add('show');
-  if (p.get('forgot') === '1') document.getElementById('forgot-ok-box').style.display = 'block';
+  if (p.get('forgot') === '1')   document.getElementById('forgot-ok-box').classList.add('show');
+
+  // ── Toggle show/hide mật khẩu ────────────────────────────────
+  function togglePass() {
+    const inp = document.getElementById('inp-pass');
+    const btn = document.getElementById('btn-toggle-pw');
+    const isHidden = inp.type === 'password';
+    inp.type = isHidden ? 'text' : 'password';
+    btn.textContent = isHidden ? '🙈' : '👁';
+  }
+
+  // ── Xác nhận gửi email quên mật khẩu ────────────────────────
+  function submitForgot() {
+    if (confirm('Gửi mật khẩu về email admin đã cài đặt trên Railway?\n\n(Đảm bảo ADMIN_EMAIL + GMAIL_PASS đã được set)')) {
+      document.getElementById('forgot-form').submit();
+    }
+  }
+
+  // ── Focus ô đầu tiên khi load (desktop) ──────────────────────
+  if (window.innerWidth > 600) {
+    document.getElementById('inp-user').focus();
+  }
 </script>
 </body>
 </html>
