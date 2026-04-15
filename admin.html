@@ -1071,7 +1071,15 @@ function escHtml(str) {
 // ─── ORDERS ───────────────────────────────────────────────────
 async function loadOrders() {
   const statusFilter = document.getElementById('order-filter')?.value || '';
-  const data = await fetch('/api/orders').then(r => r.json());
+  let data;
+  try {
+    const res = await fetch('/api/orders');
+    if (!res.ok) throw new Error('Lỗi ' + res.status);
+    data = await res.json();
+  } catch(e) {
+    toast('❌ Không tải được danh sách đơn hàng: ' + e.message, 'error');
+    return;
+  }
   ordersData = data;
 
   const filtered = statusFilter ? data.filter(o => o.status === statusFilter) : data;
@@ -1135,7 +1143,7 @@ function autoFillPrice() {
 function editOrder(id) {
   const o = ordersData.find(x => x.id === id);
   if (!o) return;
-  populateProductSelect();
+  // Điền dữ liệu trước, rồi mở modal (openModal gọi populateProductSelect lần nữa)
   document.getElementById('order-id').value = o.id;
   document.getElementById('order-customer-name').value = o.customer_name || '';
   document.getElementById('order-customer-phone').value = o.customer_phone || '';
@@ -1144,7 +1152,11 @@ function editOrder(id) {
   document.getElementById('order-status').value = o.status;
   document.getElementById('order-status-group').style.display = '';
   document.getElementById('modal-order-title').textContent = 'Chỉnh sửa đơn hàng';
-  openModal('order');
+  // Mở modal trực tiếp (không qua openModal) để tránh populateProductSelect reset select
+  document.getElementById('modal-order').classList.add('open');
+  // Populate select sau khi modal đã mở, rồi set giá trị đã có
+  populateProductSelect();
+  if (o.product_id) document.getElementById('order-product').value = o.product_id;
 }
 
 async function saveOrder() {

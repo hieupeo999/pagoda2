@@ -166,17 +166,30 @@ function requireAdmin(req, res, next) {
 
 ---
 
-## 🔑 PHÂN QUYỀN API PHẬT TỬ (QUAN TRỌNG)
+## 🔑 PHÂN QUYỀN API (QUAN TRỌNG)
 
-> **Quy tắc:** Chỉ admin mới thêm/sửa/xóa phật tử thủ công.
-> Auto-add khi khách đặt nghi lễ/công đức → server tự INSERT trực tiếp DB (không qua API).
+> **Quy tắc:** Chỉ admin mới xem/thêm/sửa/xóa dữ liệu nhạy cảm.
+> Auto-add phật tử khi khách đặt nghi lễ → server INSERT trực tiếp DB (không qua API).
 
 ```
 GET    /api/customers        → requireAdmin  (xem danh sách)
-GET    /api/customers/check  → public        (check trùng SĐT trên form)
+GET    /api/customers/check  → public        (check trùng SĐT trên form công đức)
 POST   /api/customers        → requireAdmin  (thêm thủ công từ admin panel)
 PUT    /api/customers/:id    → requireAdmin  (sửa)
 DELETE /api/customers/:id    → requireAdmin  (xóa)
+
+GET    /api/products         → public        (thanh-toan.html cần load nghi lễ)
+POST   /api/products         → requireAdmin  (thêm nghi lễ)
+PUT    /api/products/:id     → requireAdmin  (sửa nghi lễ)
+DELETE /api/products/:id     → requireAdmin  (xóa nghi lễ)
+
+GET    /api/orders           → requireAdmin  (xem danh sách — bảo vệ thông tin phật tử)
+GET    /api/orders/code/:code→ public        (phật tử kiểm tra đơn của mình)
+POST   /api/orders           → public        (khách đặt nghi lễ)
+PUT    /api/orders/:id       → requireAdmin  (sửa/xác nhận đơn)
+DELETE /api/orders/:id       → requireAdmin  (xóa đơn)
+GET    /api/orders/export    → requireAdmin  (xuất CSV)
+GET    /api/stats            → requireAdmin  (dashboard)
 ```
 
 **Auto-add trong POST /api/orders (public):**
@@ -520,6 +533,12 @@ document.getElementById('mobileNav').addEventListener('click', function(e) {
 | Link `/admin` không mở được | Dùng `\admin` (backslash) thay `/admin` | Sửa thành `/admin` (forward slash) |
 | Cookie auth fail sau đổi pass | Token cũ vẫn hợp lệ | Clear cookie sau khi đổi pass |
 | Railway không detect start | Thiếu script start | Thêm `"start":"node server.js"` vào package.json |
+| POST/PUT/DELETE /api/products không bảo mật | Thiếu requireAdmin trên mutation routes | Thêm requireAdmin vào POST/PUT/DELETE /api/products |
+| PUT/DELETE /api/orders không bảo mật | Thiếu requireAdmin | Thêm requireAdmin vào PUT/DELETE /api/orders (GET public ok cho phật tử check) |
+| GET /api/orders lộ data phật tử | Thiếu requireAdmin | Thêm requireAdmin vào GET /api/orders và /api/stats, /api/orders/export |
+| requireAdmin redirect thay vì 401 cho API | res.redirect('/admin/login') trả HTML cho API caller | Kiểm tra req.path.startsWith('/api/') → trả 401 JSON thay vì redirect |
+| loadOrders() crash khi chưa auth | fetch('/api/orders') trả 302 redirect, .json() fail | Wrap trong try/catch, kiểm tra res.ok |
+| editOrder() không set giá trị product_id vào select | Chỉ populate select nhưng không gán o.product_id | Sau populateProductSelect(), set `document.getElementById('order-product').value = o.product_id` |
 
 ---
 

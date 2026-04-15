@@ -37,6 +37,10 @@ function requireAdmin(req, res, next) {
   const cookies  = parseCookies(req);
   const curPass  = getAdminPass();
   if (cookies.adm === makeToken(curPass)) return next();
+  // API routes trả về 401 JSON; page routes redirect về login
+  if (req.path.startsWith('/api/')) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   res.redirect('/admin/login');
 }
 
@@ -477,23 +481,25 @@ app.get('/api/config', (req, res) => {
 });
 
 // ─── API: PRODUCTS ─────────────────────────────────────────────
+// GET: public (thanh-toan.html cần load danh sách nghi lễ)
 app.get('/api/products', (req, res) => {
   res.json(db.prepare('SELECT * FROM products ORDER BY id DESC').all());
 });
-app.post('/api/products', (req, res) => {
+// POST/PUT/DELETE: chỉ admin
+app.post('/api/products', requireAdmin, (req, res) => {
   const { name, price, description, quantity } = req.body;
   if (!name) return res.status(400).json({ error: 'Thiếu tên' });
   const r = db.prepare('INSERT INTO products (name,price,description,quantity) VALUES (?,?,?,?)')
     .run(name, price ?? 0, description ?? '', quantity ?? -1);
   res.json({ id: r.lastInsertRowid });
 });
-app.put('/api/products/:id', (req, res) => {
+app.put('/api/products/:id', requireAdmin, (req, res) => {
   const { name, price, description, quantity } = req.body;
   db.prepare('UPDATE products SET name=?,price=?,description=?,quantity=? WHERE id=?')
     .run(name, price, description, quantity, req.params.id);
   res.json({ success: true });
 });
-app.delete('/api/products/:id', (req, res) => {
+app.delete('/api/products/:id', requireAdmin, (req, res) => {
   db.prepare('DELETE FROM products WHERE id=?').run(req.params.id);
   res.json({ success: true });
 });
@@ -557,9 +563,11 @@ app.delete('/api/customers/:id', requireAdmin, (req, res) => {
 });
 
 // ─── API: ORDERS ───────────────────────────────────────────────
-app.get('/api/orders', (req, res) => {
+// GET danh sách: chỉ admin (bảo vệ thông tin phật tử)
+app.get('/api/orders', requireAdmin, (req, res) => {
   res.json(db.prepare('SELECT * FROM orders ORDER BY id DESC').all());
 });
+// GET theo code: public (phật tử kiểm tra đơn của mình)
 app.get('/api/orders/code/:code', (req, res) => {
   const order = db.prepare('SELECT * FROM orders WHERE order_code=?').get(req.params.code);
   if (!order) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
@@ -567,7 +575,8 @@ app.get('/api/orders/code/:code', (req, res) => {
 });
 
 // ─── API: STATS ────────────────────────────────────────────────
-app.get('/api/stats', (req, res) => {
+// Stats: chỉ admin
+app.get('/api/stats', requireAdmin, (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   res.json({
     totalRevenue:   db.prepare("SELECT COALESCE(SUM(amount),0) as v FROM orders WHERE status='success'").get().v,
@@ -580,7 +589,7 @@ app.get('/api/stats', (req, res) => {
 });
 
 // ─── API: EXPORT CSV ───────────────────────────────────────────
-app.get('/api/orders/export', (req, res) => {
+app.get('/api/orders/export', requireAdmin, (req, res) => {
   const orders = db.prepare('SELECT * FROM orders ORDER BY id DESC').all();
   const rows = [['Mã đơn','Phật tử','SĐT','Nghi lễ','Số tiền','Trạng thái','Ghi chú','Ngày tạo','Ngày CĐ']];
   orders.forEach(o => {
@@ -636,7 +645,7 @@ app.post('/api/orders', async (req, res) => {
   res.json({ id: r.lastInsertRowid, order_code });
 });
 
-app.put('/api/orders/:id', async (req, res) => {
+app.put('/api/orders/:id', requireAdmin, async (req, res) => {
   const { status, customer_name, customer_phone, product_name, amount, note } = req.body;
   const existing = db.prepare('SELECT * FROM orders WHERE id=?').get(req.params.id);
   const paid_at = status === 'success'
@@ -666,7 +675,7 @@ app.put('/api/orders/:id', async (req, res) => {
   res.json({ success: true });
 });
 
-app.delete('/api/orders/:id', (req, res) => {
+app.delete('/api/orders/:id', requireAdmin, (req, res) => {
   db.prepare('DELETE FROM orders WHERE id=?').run(req.params.id);
   res.json({ success: true });
 });
