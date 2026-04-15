@@ -847,7 +847,7 @@ function closeModal(type) {
 
 function clearForm(type) {
   if (type === 'product') {
-    ['product-id','product-name','product-price','product-quantity','product-description']
+    ['product-id','product-name','product-price','product-description']
       .forEach(id => document.getElementById(id).value = '');
     document.getElementById('modal-product-title').textContent = 'Thêm nghi lễ';
   }
@@ -868,14 +868,14 @@ function clearForm(type) {
 
 function editProduct(id) {
   const p = productsData.find(x => x.id === id);
-  if (!p) return;
-  document.getElementById('product-id').value = p.id;
-  document.getElementById('product-name').value = p.name;
-  document.getElementById('product-price').value = p.price;
-  document.getElementById('product-quantity').value = p.quantity;
+  if (!p) { toast('❌ Không tìm thấy nghi lễ', 'error'); return; }
+  document.getElementById('product-id').value          = p.id;
+  document.getElementById('product-name').value        = p.name        || '';
+  document.getElementById('product-price').value       = p.price       ?? 0;
   document.getElementById('product-description').value = p.description || '';
-  document.getElementById('modal-product-title').textContent = 'Chỉnh sửa nghi lễ';
-  openModal('product');
+  document.getElementById('modal-product-title').textContent = '✏️ Sửa nghi lễ';
+  // Mở modal trực tiếp — không qua openModal() để tránh clearForm reset dữ liệu
+  document.getElementById('modal-product').classList.add('open');
 }
 
 async function saveProduct() {
