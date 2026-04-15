@@ -406,6 +406,7 @@ app.get('/admin/login', (req, res) => res.sendFile(path.join(__dirname, 'admin-l
 app.post('/admin/login', express.urlencoded({ extended: false }), (req, res) => {
   const { username, password } = req.body;
   const curPass = getAdminPass();
+  console.log('[LOGIN] user:', username, '| env_pass:', process.env.ADMIN_PASS ? 'SET' : 'NOT SET', '| pass_match:', password === curPass);
   if (username === ADMIN_USER && password === curPass) {
     res.setHeader('Set-Cookie', `adm=${makeToken(curPass)}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`);
     return res.redirect('/admin');
