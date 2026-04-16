@@ -700,6 +700,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   addMember();
   await loadConfig();
   await loadProducts();
+
+  // Tự động cập nhật khi admin thêm/sửa/xóa nghi lễ (không cần F5)
+  try {
+    const ch = new BroadcastChannel('temple-products');
+    ch.onmessage = () => loadProducts();
+  } catch(e) {}
 });
 
 // ─── PAYMENT METHOD ───────────────────────────────────────────

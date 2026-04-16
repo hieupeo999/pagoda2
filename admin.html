@@ -952,6 +952,7 @@ async function saveProduct() {
     if (data.error) { toast('❌ ' + data.error, 'error'); return; }
     closeModal('product');
     await loadProducts();
+    notifyProductsUpdated();
     toast(id ? '✅ Đã cập nhật nghi lễ' : '✅ Đã thêm nghi lễ mới', 'success');
   } catch(e) {
     toast('❌ Lỗi kết nối', 'error');
@@ -965,7 +966,13 @@ async function deleteProduct(id) {
   if (!confirm(`Xoá nghi lễ "${p?.name || id}"?`)) return;
   await fetch('/api/products/' + id, { method: 'DELETE' });
   await loadProducts();
+  notifyProductsUpdated();
   toast('🗑️ Đã xoá nghi lễ');
+}
+
+// Thông báo cho trang công đức cập nhật nghi lễ (không cần F5)
+function notifyProductsUpdated() {
+  try { new BroadcastChannel('temple-products').postMessage('updated'); } catch(e) {}
 }
 
 // ─── PHẬT TỬ ──────────────────────────────────────────────────

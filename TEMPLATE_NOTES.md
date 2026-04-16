@@ -4,6 +4,14 @@
 
 ---
 
+> ## ⚠️ LƯU Ý QUAN TRỌNG — KHÔNG ĐƯỢC BỎ QUA
+> **Tất cả người quản lý chùa đều là NỮ.**
+> - ❌ KHÔNG dùng: "Đại đức", "Ni sư", "Thượng tọa", "Hòa thượng"
+> - ✅ CHỈ dùng: **"Trụ trì chùa"** hoặc **"Sư Trụ Trì"**
+> - Áp dụng cho: email templates, giao diện admin, nội dung trang chủ, `temple-config.js`, mọi văn bản trong code
+
+---
+
 ## MỤC LỤC NHANH
 1. [Stack & Cấu trúc file](#1-stack--cấu-trúc-file)
 2. [Tạo website chùa mới — 3 bước](#2-tạo-website-chùa-mới--3-bước)
@@ -103,7 +111,7 @@ const TEMPLE = {
 
   // ══ TRỤ TRÌ ════════════════════════════════════════════
   abbot: {
-    name:  'Đại đức Thích ABC',
+    name:  'Trụ trì Thích ABC',   // KHÔNG dùng "Đại đức" hay "Ni sư" — chỉ dùng "Trụ trì"
     title: 'Trụ trì – Chùa ABC',
     bio:   'Mô tả ngắn về trụ trì...'
   },
